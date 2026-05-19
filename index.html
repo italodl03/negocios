@@ -545,30 +545,51 @@
             border-color: var(--dourado);
         }
 
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
+        .produto-simples, .produto-duplo {
+            background: var(--bg-principal);
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
         }
 
-        .checkbox-group input {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
-
-        .checkbox-group label {
-            margin: 0;
-            cursor: pointer;
+        .produto-simples {
+            border-left: 3px solid var(--sucesso);
         }
 
         .produto-duplo {
-            background: var(--bg-principal);
-            padding: 15px;
-            border-radius: 12px;
-            margin-top: 15px;
             border-left: 3px solid var(--dourado);
+            margin-top: 20px;
+        }
+
+        .separador {
+            text-align: center;
+            margin: 20px 0 10px 0;
+            position: relative;
+        }
+
+        .separador::before,
+        .separador::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: var(--borda);
+        }
+
+        .separador::before {
+            left: 0;
+        }
+
+        .separador::after {
+            right: 0;
+        }
+
+        .separador span {
+            background: var(--bg-card);
+            padding: 0 10px;
+            font-size: 0.8rem;
+            color: var(--texto-secundario);
         }
 
         .grupo-info {
@@ -870,27 +891,34 @@
             <div class="grid-2">
                 <div class="chart-box">
                     <h3 style="margin-bottom:15px; color:var(--dourado);">Cadastrar Produto</h3>
-                    <form id="formProduto" onsubmit="salvarProduto(event)">
-                        <div class="form-group"><label>Nome do Produto</label><input type="text" id="prodNome" required></div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="prodDuplo" onchange="toggleProdutoDuplo()">
-                            <label>Produto com variação (dois produtos com estoque compartilhado)</label>
-                        </div>
-                        <div id="produtoDuploDiv" style="display:none;" class="produto-duplo">
-                            <div class="form-group"><label>Nome da Variação 1</label><input type="text" id="prodNomeDuplo1" placeholder=""></div>
-                            <div class="form-group"><label>Preço Variação 1 (R$)</label><input type="number" step="0.01" id="prodPrecoDuplo1"></div>
-                            <div class="form-group"><label>Nome da Variação 2</label><input type="text" id="prodNomeDuplo2" placeholder=""></div>
-                            <div class="form-group"><label>Preço Variação 2 (R$)</label><input type="number" step="0.01" id="prodPrecoDuplo2"></div>
-                            <div class="form-group"><label>Custo Unitário (compartilhado)</label><input type="number" step="0.01" id="prodCustoDuplo" required></div>
-                            <div class="form-group"><label>Quantidade em Estoque (compartilhada)</label><input type="number" id="prodEstoqueDuplo" required></div>
-                        </div>
-                        <div id="produtoSimplesDiv">
-                            <div class="form-group"><label>Custo Unitário (R$)</label><input type="number" step="0.01" id="prodCusto"></div>
-                            <div class="form-group"><label>Preço de Venda (R$)</label><input type="number" step="0.01" id="prodVenda"></div>
-                            <div class="form-group"><label>Quantidade em Estoque</label><input type="number" id="prodEstoque"></div>
-                        </div>
-                        <button type="submit" class="btn-primary">Adicionar Produto</button>
-                    </form>
+                    
+                    <!-- Produto Simples -->
+                    <div class="produto-simples">
+                        <h4 style="margin-bottom:15px; color:var(--sucesso);"> Produto Simples</h4>
+                        <form id="formProdutoSimples" onsubmit="salvarProdutoSimples(event)">
+                            <div class="form-group"><label>Nome do Produto</label><input type="text" id="prodNomeSimples" required placeholder=""></div>
+                            <div class="form-group"><label>Custo Unitário (R$)</label><input type="number" step="0.01" id="prodCustoSimples" required placeholder=""></div>
+                            <div class="form-group"><label>Preço de Venda (R$)</label><input type="number" step="0.01" id="prodVendaSimples" required placeholder=""></div>
+                            <div class="form-group"><label>Quantidade em Estoque</label><input type="number" id="prodEstoqueSimples" required placeholder=""></div>
+                            <button type="submit" class="btn-primary">Adicionar Produto Simples</button>
+                        </form>
+                    </div>
+
+                    <div class="separador"><span>ou</span></div>
+
+                    <!-- Produto com Variação -->
+                    <div class="produto-duplo">
+                        <h4 style="margin-bottom:15px; color:var(--dourado);"> Produto com Variação (Estoque Compartilhado)</h4>
+                        <form id="formProdutoDuplo" onsubmit="salvarProdutoDuplo(event)">
+                            <div class="form-group"><label>Nome da Variação 1</label><input type="text" id="prodNomeDuplo1" required placeholder=""></div>
+                            <div class="form-group"><label>Preço Variação 1 (R$)</label><input type="number" step="0.01" id="prodPrecoDuplo1" required placeholder=""></div>
+                            <div class="form-group"><label>Nome da Variação 2</label><input type="text" id="prodNomeDuplo2" required placeholder=""></div>
+                            <div class="form-group"><label>Preço Variação 2 (R$)</label><input type="number" step="0.01" id="prodPrecoDuplo2" required placeholder=""></div>
+                            <div class="form-group"><label>Custo Unitário (compartilhado)</label><input type="number" step="0.01" id="prodCustoDuplo" required placeholder=""></div>
+                            <div class="form-group"><label>Quantidade em Estoque (compartilhada)</label><input type="number" id="prodEstoqueDuplo" required placeholder=""></div>
+                            <button type="submit" class="btn-primary">Adicionar Produto com Variação</button>
+                        </form>
+                    </div>
                 </div>
                 <div>
                     <h3 style="margin-bottom:15px;">Lista de Produtos Cadastrados</h3>
@@ -991,12 +1019,6 @@
         let carrinhoAtual = {};
         let tipoPagamentoSelecionado = 'avista';
         let produtoEditandoId = null;
-
-        function toggleProdutoDuplo() {
-            const isDuplo = document.getElementById('prodDuplo').checked;
-            document.getElementById('produtoDuploDiv').style.display = isDuplo ? 'block' : 'none';
-            document.getElementById('produtoSimplesDiv').style.display = isDuplo ? 'none' : 'block';
-        }
 
         function salvarDB() {
             localStorage.setItem('nexis_db', JSON.stringify(db));
@@ -1190,7 +1212,6 @@
         function atualizarInfoCliente() {
             const clienteId = document.getElementById('clienteVendaSelect').value;
             const infoDiv = document.getElementById('infoCliente');
-            const debitoInfo = document.getElementById('debitoInfo');
             
             if (clienteId !== 'avulso') {
                 const cliente = db.clientes.find(c => c.id == clienteId);
@@ -1202,7 +1223,6 @@
                 }
             } else {
                 infoDiv.style.display = 'none';
-                debitoInfo.style.display = 'none';
             }
             atualizarResumoVenda();
         }
@@ -1257,40 +1277,57 @@
             atualizarResumoVenda();
         }
 
-        function salvarProduto(event) {
+        function salvarProdutoSimples(event) {
             event.preventDefault();
-            const isDuplo = document.getElementById('prodDuplo').checked;
+            const nome = document.getElementById('prodNomeSimples').value;
+            const custo = parseFloat(document.getElementById('prodCustoSimples').value);
+            const venda = parseFloat(document.getElementById('prodVendaSimples').value);
+            const estoque = parseInt(document.getElementById('prodEstoqueSimples').value);
             
-            if (isDuplo) {
-                const nome1 = document.getElementById('prodNomeDuplo1').value;
-                const nome2 = document.getElementById('prodNomeDuplo2').value;
-                const preco1 = parseFloat(document.getElementById('prodPrecoDuplo1').value);
-                const preco2 = parseFloat(document.getElementById('prodPrecoDuplo2').value);
-                const custo = parseFloat(document.getElementById('prodCustoDuplo').value);
-                const estoque = parseInt(document.getElementById('prodEstoqueDuplo').value);
-                const grupoId = Date.now();
-                
-                const produto1 = { id: Date.now(), nome: nome1, custo: custo, venda: preco1, estoque: estoque, grupoId: grupoId };
-                const produto2 = { id: Date.now() + 1, nome: nome2, custo: custo, venda: preco2, estoque: estoque, grupoId: grupoId };
-                
-                db.produtos.push(produto1, produto2);
-                db.ordemProdutos.push(produto1.id, produto2.id);
-            } else {
-                const produto = {
-                    id: Date.now(),
-                    nome: document.getElementById('prodNome').value,
-                    custo: parseFloat(document.getElementById('prodCusto').value),
-                    venda: parseFloat(document.getElementById('prodVenda').value),
-                    estoque: parseInt(document.getElementById('prodEstoque').value)
-                };
-                db.produtos.push(produto);
-                db.ordemProdutos.push(produto.id);
+            if (!nome || isNaN(custo) || isNaN(venda) || isNaN(estoque)) {
+                alert('Por favor, preencha todos os campos do produto!');
+                return;
             }
             
-            document.getElementById('formProduto').reset();
-            document.getElementById('prodDuplo').checked = false;
-            toggleProdutoDuplo();
+            const produto = {
+                id: Date.now(),
+                nome: nome,
+                custo: custo,
+                venda: venda,
+                estoque: estoque
+            };
+            db.produtos.push(produto);
+            db.ordemProdutos.push(produto.id);
+            
+            document.getElementById('formProdutoSimples').reset();
             salvarDB();
+            alert('Produto cadastrado com sucesso!');
+        }
+
+        function salvarProdutoDuplo(event) {
+            event.preventDefault();
+            const nome1 = document.getElementById('prodNomeDuplo1').value;
+            const nome2 = document.getElementById('prodNomeDuplo2').value;
+            const preco1 = parseFloat(document.getElementById('prodPrecoDuplo1').value);
+            const preco2 = parseFloat(document.getElementById('prodPrecoDuplo2').value);
+            const custo = parseFloat(document.getElementById('prodCustoDuplo').value);
+            const estoque = parseInt(document.getElementById('prodEstoqueDuplo').value);
+            const grupoId = Date.now();
+            
+            if (!nome1 || !nome2 || isNaN(preco1) || isNaN(preco2) || isNaN(custo) || isNaN(estoque)) {
+                alert('Por favor, preencha todos os campos da variação!');
+                return;
+            }
+            
+            const produto1 = { id: Date.now(), nome: nome1, custo: custo, venda: preco1, estoque: estoque, grupoId: grupoId };
+            const produto2 = { id: Date.now() + 1, nome: nome2, custo: custo, venda: preco2, estoque: estoque, grupoId: grupoId };
+            
+            db.produtos.push(produto1, produto2);
+            db.ordemProdutos.push(produto1.id, produto2.id);
+            
+            document.getElementById('formProdutoDuplo').reset();
+            salvarDB();
+            alert('Produtos com variação cadastrados com sucesso!');
         }
 
         function renderizarListaProdutos() {
@@ -1496,19 +1533,16 @@
             const lucro = faturamento - gastosTotal - custoProdutos;
             const fiadoTotal = db.clientes.reduce((sum, c) => sum + (c.debito || 0), 0);
             
-            // CORREÇÃO: Calcular estoque sem duplicar produtos compartilhados
             const gruposProcessados = new Set();
             let totalEstoque = 0;
             
             db.produtos.forEach(produto => {
                 if (produto.grupoId) {
-                    // Se for produto com grupo, só conta uma vez por grupo
                     if (!gruposProcessados.has(produto.grupoId)) {
                         gruposProcessados.add(produto.grupoId);
                         totalEstoque += produto.estoque;
                     }
                 } else {
-                    // Produto normal
                     totalEstoque += produto.estoque;
                 }
             });
@@ -1691,7 +1725,6 @@
             document.getElementById('gastoData').valueAsDate = new Date();
             carregarSelectClientes();
             selecionarPagamento('avista');
-            toggleProdutoDuplo();
         });
     </script>
 </body>
