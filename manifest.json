@@ -1,6 +1,6 @@
 {
-  "name": "Meu Site",
-  "short_name": "MeuApp",
+  "name": "nexis premium",
+  "short_name": "negocios",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
@@ -17,5 +17,6 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "id": "nexis premium"
 }
