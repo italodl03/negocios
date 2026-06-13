@@ -74,7 +74,7 @@
         .view-section.active { display: block; animation: fadeIn 0.4s ease; }
         .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 25px; }
         .chart-box { background: var(--bg-card); padding: 20px; border-radius: 20px; border: 1px solid var(--borda); box-shadow: var(--sombra); min-height: 280px; }
-        .chart-box h3 { color: var(--dourado); margin-bottom: 15px; }
+        .chart-box h3 { color: var(--dourado); margin-bottom: 15px; font-size: 1.1rem; }
         .form-group { margin-bottom: 18px; }
         label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--texto-secundario); }
         input, select, textarea { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--borda); background: var(--bg-principal); color: var(--texto-principal); font-size: 1rem; transition: var(--transicao); }
@@ -127,7 +127,8 @@
         .edit-btn:hover { background: var(--dourado); color: white; }
         .delete-btn { color: var(--erro); border-color: var(--erro); }
         .delete-btn:hover { background: var(--erro); color: white; }
-        .box-qrcode { display: flex; justify-content: center; align-items: center; margin: 15px 0; background: #f0f0f0; padding: 15px; border-radius: 12px; }
+        .box-qrcode { display: flex; justify-content: center; align-items: center; margin: 15px 0; background: #ffffff; padding: 15px; border-radius: 12px; }
+        [data-theme="dark"] .box-qrcode { background: #2a2a2a; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @media(min-width: 769px) { body { padding-bottom: 0; padding-top: 0; } header { padding: 20px 40px; } .container { padding: 40px; } }
         .choice-buttons { display: flex; gap: 15px; margin-top: 15px; }
@@ -160,7 +161,12 @@
                 <div class="metric-card"><div class="metric-title">Clientes Ativos</div><div class="metric-value" id="dashQtdClientes">0</div></div>
                 <div class="metric-card"><div class="metric-title">Itens em Estoque</div><div class="metric-value" id="dashEstoque">0</div></div>
             </div>
-            <div class="charts-grid"><div class="chart-box"><canvas id="chartLucroGasto"></canvas></div><div class="chart-box"><canvas id="chartCategoriasDespesa"></canvas></div><div class="chart-box"><canvas id="chartEvolucaoVendas"></canvas></div><div class="chart-box"><canvas id="chartMaioresDevedores"></canvas></div></div>
+            <div class="charts-grid">
+                <div class="chart-box"><h3>📊 Lucro Líquido vs Despesas</h3><canvas id="chartLucroGasto"></canvas></div>
+                <div class="chart-box"><h3>💸 Despesas por Categoria</h3><canvas id="chartCategoriasDespesa"></canvas></div>
+                <div class="chart-box"><h3>📈 Evolução de Vendas (Mensal)</h3><canvas id="chartEvolucaoVendas"></canvas></div>
+                <div class="chart-box"><h3>🏆 Top Devedores</h3><canvas id="chartMaioresDevedores"></canvas></div>
+            </div>
         </section>
 
         <!-- GASTOS -->
@@ -293,9 +299,16 @@
         function calcularJurosDevedor(debito, dataInicial) { if (!debito || debito <= 0) return 0; let diasCarencia = db.config.jurosDiasCarencia || 7, taxa = (db.config.jurosMensal || 5) / 100, tipo = db.config.jurosTipo || 'simples', dataAtual = new Date(), diff = Math.floor((dataAtual - new Date(dataInicial)) / (1000*3600*24)); if (diff <= diasCarencia) return 0; let meses = (diff - diasCarencia) / 30; return tipo === 'simples' ? debito * taxa * meses : debito * (Math.pow(1+taxa, meses) - 1); }
         function aplicarJurosCliente(id) { let cliente = db.clientes.find(c => c.id === id); if (cliente && cliente.debito > 0 && cliente.dataUltimaCompra) { let juros = calcularJurosDevedor(cliente.debito, cliente.dataUltimaCompra); if (juros > 0) { if (confirm(`Aplicar R$ ${juros.toFixed(2)} de juros?`)) { cliente.debito += juros; cliente.dataUltimaCompra = new Date().toISOString(); salvarDB(); } } else alert('Sem juros acumulados'); } }
 
-        // Dashboard e gráficos
+        // Dashboard e gráficos (com títulos corrigidos)
         function atualizarDashboard() { let fat = db.vendas.reduce((s,v)=>s+v.valorTotal,0), gastos = db.gastos.reduce((s,g)=>s+g.valor,0), custo = db.vendas.reduce((s,v)=>s+(v.custoTotal||0),0), lucro = fat - gastos - custo, fiado = db.clientes.reduce((s,c)=>s+(c.debito||0),0), estoque = db.produtos.reduce((acc,p)=>acc+p.estoque,0), meta = db.metaFaturamento, perc = Math.min((fat/meta)*100,100); document.getElementById('dashFaturamento').innerHTML = `R$ ${fat.toFixed(2)}`; document.getElementById('dashLucro').innerHTML = `R$ ${lucro.toFixed(2)}`; document.getElementById('dashGastos').innerHTML = `R$ ${gastos.toFixed(2)}`; document.getElementById('dashFiado').innerHTML = `R$ ${fiado.toFixed(2)}`; document.getElementById('dashQtdVendas').innerHTML = db.vendas.length; document.getElementById('dashQtdClientes').innerHTML = db.clientes.length; document.getElementById('dashEstoque').innerHTML = estoque; document.getElementById('goalText').innerHTML = `R$ ${fat.toFixed(2)} / R$ ${meta.toFixed(2)}`; document.getElementById('goalProgress').style.width = `${perc}%`; }
-        function atualizarGraficos() { if (charts.lucroGasto) charts.lucroGasto.destroy(); let fat = db.vendas.reduce((s,v)=>s+v.valorTotal,0), gastos = db.gastos.reduce((s,g)=>s+g.valor,0), custo = db.vendas.reduce((s,v)=>s+(v.custoTotal||0),0), lucro = fat - gastos - custo; charts.lucroGasto = new Chart(document.getElementById('chartLucroGasto'),{type:'bar',data:{labels:['Lucro','Gastos'],datasets:[{data:[lucro,gastos],backgroundColor:['#2ec4b6','#e71d36']}]}}); let cats = {}; db.gastos.forEach(g=>cats[g.categoria]=(cats[g.categoria]||0)+g.valor); if(charts.categorias) charts.categorias.destroy(); charts.categorias = new Chart(document.getElementById('chartCategoriasDespesa'),{type:'pie',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:['#c5a880','#2ec4b6','#e71d36','#f4a261']}]}}); let vendasMes={}; db.vendas.forEach(v=>{let m=v.data?.substring(0,7)||'2024-01'; vendasMes[m]=(vendasMes[m]||0)+v.valorTotal;}); if(charts.vendas) charts.vendas.destroy(); charts.vendas = new Chart(document.getElementById('chartEvolucaoVendas'),{type:'line',data:{labels:Object.keys(vendasMes),datasets:[{data:Object.values(vendasMes),borderColor:'#c5a880'}]}}); let devedores = db.clientes.filter(c=>(c.debito||0)>0).slice(0,5); if(charts.devedores) charts.devedores.destroy(); charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c=>c.nome),datasets:[{data:devedores.map(c=>c.debito),backgroundColor:'#e71d36'}]}}); }
+        function atualizarGraficos() { 
+            if (charts.lucroGasto) charts.lucroGasto.destroy(); 
+            let fat = db.vendas.reduce((s,v)=>s+v.valorTotal,0), gastos = db.gastos.reduce((s,g)=>s+g.valor,0), custo = db.vendas.reduce((s,v)=>s+(v.custoTotal||0),0), lucro = fat - gastos - custo; 
+            charts.lucroGasto = new Chart(document.getElementById('chartLucroGasto'),{type:'bar',data:{labels:['Lucro Líquido','Despesas Totais'],datasets:[{data:[lucro,gastos],backgroundColor:['#2ec4b6','#e71d36']}]}}); 
+            let cats = {}; db.gastos.forEach(g=>cats[g.categoria]=(cats[g.categoria]||0)+g.valor); if(charts.categorias) charts.categorias.destroy(); charts.categorias = new Chart(document.getElementById('chartCategoriasDespesa'),{type:'pie',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:['#c5a880','#2ec4b6','#e71d36','#f4a261']}]}}); 
+            let vendasMes={}; db.vendas.forEach(v=>{let m=v.data?.substring(0,7)||'2024-01'; vendasMes[m]=(vendasMes[m]||0)+v.valorTotal;}); if(charts.vendas) charts.vendas.destroy(); charts.vendas = new Chart(document.getElementById('chartEvolucaoVendas'),{type:'line',data:{labels:Object.keys(vendasMes),datasets:[{data:Object.values(vendasMes),borderColor:'#c5a880',fill:false}]}}); 
+            let devedores = db.clientes.filter(c=>(c.debito||0)>0).slice(0,5); if(charts.devedores) charts.devedores.destroy(); charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c=>c.nome),datasets:[{data:devedores.map(c=>c.debito),backgroundColor:'#e71d36'}]}}); 
+        }
 
         window.addEventListener('DOMContentLoaded', () => {
             document.body.setAttribute('data-theme', db.config.tema || 'dark');
