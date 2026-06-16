@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head><link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexis Premium - Gestão Financeira Empresarial</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* ESTILOS COMPLETOS IGUAIS AO ORIGINAL */
+        /* ESTILOS GLOBAIS - MANTIDOS IGUAIS AOS ORIGINAIS */
         :root {
             --bg-principal: #f8f9fa;
             --bg-card: #ffffff;
@@ -90,7 +91,7 @@
         .drag-handle:active { cursor: grabbing; }
         .item-info h4 { font-size: 1rem; margin-bottom: 4px; color: var(--texto-principal); }
         .item-info p { font-size: 0.8rem; color: var(--texto-secundario); }
-        .item-meta { text-align: right; display: flex; gap: 8px; align-items: center; }
+        .item-meta { text-align: right; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
         .juros-info { font-size: 0.75rem; color: var(--dourado); margin-top: 4px; }
         .quantidade-controle { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
         .quantidade-controle button { width: 35px; height: 35px; border-radius: 8px; border: 1px solid var(--borda); background: var(--bg-principal); cursor: pointer; font-size: 1.2rem; font-weight: bold; transition: var(--transicao); color: var(--texto-principal); }
@@ -120,11 +121,17 @@
         .nav-item { background: none; border: none; color: var(--texto-secundario); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; font-weight: 600; cursor: pointer; gap: 4px; width: 20%; transition: var(--transicao); }
         .nav-item.active { color: var(--dourado); }
         .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 25px; }
-        .edit-btn, .delete-btn { background: none; border: 1px solid var(--dourado); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; transition: var(--transicao); }
-        .edit-btn { color: var(--dourado); }
+        .edit-btn, .delete-btn, .action-btn { background: none; border: 1px solid var(--borda); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: var(--transicao); color: var(--texto-principal); }
+        .edit-btn { border-color: var(--dourado); color: var(--dourado); }
         .edit-btn:hover { background: var(--dourado); color: white; }
-        .delete-btn { color: var(--erro); border-color: var(--erro); }
+        .delete-btn { border-color: var(--erro); color: var(--erro); }
         .delete-btn:hover { background: var(--erro); color: white; }
+        .action-btn { border-color: var(--dourado); color: var(--dourado); }
+        .action-btn:hover { background: var(--dourado); color: white; }
+        .action-btn.danger { border-color: var(--erro); color: var(--erro); }
+        .action-btn.danger:hover { background: var(--erro); color: white; }
+        .action-btn.success { border-color: var(--sucesso); color: var(--sucesso); }
+        .action-btn.success:hover { background: var(--sucesso); color: white; }
         .box-qrcode { display: flex; justify-content: center; align-items: center; margin: 15px 0; background: #ffffff; padding: 15px; border-radius: 12px; }
         [data-theme="dark"] .box-qrcode { background: #2a2a2a; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -132,11 +139,153 @@
         .choice-buttons { display: flex; gap: 15px; margin-top: 15px; }
         .choice-buttons button { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--dourado); background: var(--bg-principal); font-weight: bold; cursor: pointer; transition: 0.2s; color: var(--texto-principal); }
         .choice-buttons button:hover { background: var(--dourado); color: white; }
-        /* Estilos para a lista de estoques */
         .estoque-list { margin-top: 20px; background: var(--bg-principal); border-radius: 12px; padding: 15px; }
         .estoque-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--borda); }
         .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; margin-left: 8px; color: var(--texto-secundario); }
         .btn-icon:hover { color: var(--dourado); }
+        
+        /* ESTILO DO BOLETO DIGITAL - VERSÃO LIMPA SEM CHAVE PIX TEXTUAL */
+        .boleto-digital {
+            background: white;
+            color: #1a1a1a;
+            padding: 24px;
+            width: 400px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            border-radius: 20px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+        [data-theme="dark"] .boleto-digital {
+            background: #141414;
+            color: #f8f9fa;
+            border-color: #2d2d2d;
+        }
+        .boleto-digital .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .boleto-digital .header h2 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+        .boleto-digital .header .titulo-boleto {
+            font-size: 11px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+        .boleto-digital .info-linha {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eef2f6;
+        }
+        [data-theme="dark"] .boleto-digital .info-linha {
+            border-bottom-color: #2d2d2d;
+        }
+        .boleto-digital .info-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #6c757d;
+        }
+        .boleto-digital .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        [data-theme="dark"] .boleto-digital .info-value {
+            color: #f8f9fa;
+        }
+        .boleto-digital .valor-destaque {
+            background: #f8f9fc;
+            padding: 16px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        [data-theme="dark"] .boleto-digital .valor-destaque {
+            background: #1e1e1e;
+        }
+        .boleto-digital .valor-destaque .label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .boleto-digital .valor-destaque .valor {
+            font-size: 36px;
+            font-weight: 800;
+            color: #2ec4b6;
+            letter-spacing: -1px;
+        }
+        .boleto-digital .qrcode-area {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 16px;
+            text-align: center;
+            margin: 16px 0;
+            border: 1px solid #eef2f6;
+        }
+        [data-theme="dark"] .boleto-digital .qrcode-area {
+            background: #1e1e1e;
+            border-color: #2d2d2d;
+        }
+        .boleto-digital .qrcode-area p {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 8px;
+        }
+        .boleto-digital .footer {
+            text-align: center;
+            font-size: 10px;
+            color: #6c757d;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #eef2f6;
+        }
+        [data-theme="dark"] .boleto-digital .footer {
+            border-top-color: #2d2d2d;
+        }
+
+        /* Estilo para os botões de ação nos clientes */
+        .cliente-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            margin-top: 6px;
+        }
+        .cliente-actions .action-btn {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--borda);
+            background: var(--bg-principal);
+            color: var(--texto-principal);
+            cursor: pointer;
+            transition: var(--transicao);
+            font-weight: 600;
+        }
+        .cliente-actions .action-btn:hover {
+            transform: translateY(-1px);
+        }
+        .cliente-actions .action-btn.debito { border-color: var(--dourado); color: var(--dourado); }
+        .cliente-actions .action-btn.debito:hover { background: var(--dourado); color: white; }
+        .cliente-actions .action-btn.pagar { border-color: var(--sucesso); color: var(--sucesso); }
+        .cliente-actions .action-btn.pagar:hover { background: var(--sucesso); color: white; }
+        .cliente-actions .action-btn.juros { border-color: #f4a261; color: #f4a261; }
+        .cliente-actions .action-btn.juros:hover { background: #f4a261; color: white; }
+        .cliente-actions .action-btn.excluir { border-color: var(--erro); color: var(--erro); }
+        .cliente-actions .action-btn.excluir:hover { background: var(--erro); color: white; }
+        .cliente-actions .action-btn.editar { border-color: var(--dourado); color: var(--dourado); }
+        .cliente-actions .action-btn.editar:hover { background: var(--dourado); color: white; }
+        .cliente-actions .action-btn.boleto { border-color: #2ec4b6; color: #2ec4b6; }
+        .cliente-actions .action-btn.boleto:hover { background: #2ec4b6; color: white; }
     </style>
 </head>
 <body>
@@ -145,13 +294,34 @@
         <div class="top-actions"><button class="btn-settings" onclick="abrirConfiguracoes()" title="Configurações">⚙️</button></div>
     </header>
 
-    <!-- Modais -->
+    <!-- Modais existentes -->
     <div id="modalConfig" class="modal"><div class="modal-content"><h3>⚙️ Configurações da Loja</h3><div class="config-section"><h4>🏪 Personalização</h4><input type="text" id="configNomePreto" placeholder="Nome na cor preta"><input type="text" id="configNomeDourado" placeholder="Nome na cor dourada"><div class="modal-buttons"><button onclick="salvarNomes()">💾 Salvar Nomes</button></div></div><div class="config-section"><h4>🌓 Aparência</h4><button class="config-btn" onclick="toggleTheme()">🌓 Alternar Tema (Claro/Escuro)</button></div><div class="config-section"><h4>💳 Configurações Pix</h4><input type="text" id="configPixChave" placeholder="Chave Pix (CPF, CNPJ, E-mail ou Telefone)"><input type="text" id="configPixNome" placeholder="Nome do Beneficiário (até 25 caracteres)"><input type="text" id="configPixCidade" placeholder="Cidade (até 15 caracteres)"><button class="config-btn warning" onclick="salvarConfigPix()">Salvar Dados Pix</button><small style="display:block; margin-top:5px;">Usado para gerar QR Code</small></div><div class="config-section"><h4>💰 Configuração de Juros do Fiado</h4><div class="juros-config"><label>Taxa de Juros (% ao mês)</label><input type="number" id="configJurosMensal" step="0.1"><label>Dias para começar a cobrar juros</label><input type="number" id="configJurosDiasCarencia"><label>Tipo de Juros</label><select id="configJurosTipo"><option value="simples">Juros Simples</option><option value="composto">Juros Compostos</option></select><button class="config-btn warning" onclick="salvarConfigJuros()" style="margin-top: 10px;">Salvar Configurações de Juros</button></div></div><div class="config-section"><h4>🎯 Meta Financeira</h4><input type="number" id="configMeta" step="1000" placeholder="Meta de faturamento"><button class="config-btn warning" onclick="alterarMeta()">Definir Meta</button></div><div class="config-section"><h4>🗑️ Limpeza de Dados</h4><div class="config-buttons"><button class="config-btn danger" onclick="limparGastos()">Limpar Gastos</button><button class="config-btn danger" onclick="limparVendas()">Limpar Vendas</button><button class="config-btn danger" onclick="zerarMes()">🔄 Zerar Mês</button></div><small style="color: var(--texto-secundario); display: block; margin-top: 10px;">⚠️ Atenção: Estas ações não podem ser desfeitas!</small></div><div class="modal-buttons"><button onclick="fecharConfiguracoes()">❌ Fechar</button></div></div></div>
     <div id="modalEditarProduto" class="modal"><div class="modal-content"><h3>✏️ Editar Produto</h3><input type="text" id="editProdNome" placeholder="Nome do Produto"><input type="number" id="editProdVenda" step="0.01" placeholder="Preço de Venda (R$)"><select id="editProdEstoqueId"></select><div class="modal-buttons"><button onclick="salvarEdicaoProduto()">💾 Salvar Alterações</button><button onclick="fecharModalEdicao()">❌ Cancelar</button></div></div></div>
     <div id="modalPix" class="modal"><div class="modal-content" style="max-width: 500px; text-align: center;"><h3>💸 Pagamento via Pix</h3><p style="margin: 10px 0;">Escaneie o QR Code ou copie o código:</p><div class="box-qrcode"><div id="pixQRCodeContainer"></div></div><textarea id="pixCopiaCola" rows="3" readonly placeholder="Código Pix copia e cola aparecerá aqui..."></textarea><div class="modal-buttons" style="margin-top: 20px;"><button id="confirmarPixBtn" class="btn-primary">✅ Confirmar Pagamento Pix</button><button onclick="fecharModalPix()" class="btn-primary" style="background: #333; border-color: var(--borda);">Cancelar</button></div></div></div>
     <div id="modalEscolhaPagamento" class="modal"><div class="modal-content" style="text-align: center;"><h3>💵 Escolha a forma de pagamento</h3><p style="margin: 15px 0;">Valor total: <strong id="escolhaValorTotal">R$ 0,00</strong></p><div class="choice-buttons"><button id="escolhaDinheiroBtn">💵 Dinheiro</button><button id="escolhaPixBtn">💳 Pix</button></div><div class="modal-buttons" style="margin-top: 20px;"><button onclick="fecharModalEscolha()">Cancelar</button></div></div></div>
-    <!-- Modal de Estoque modificado: agora o campo é "Valor por unidade (R$)" -->
     <div id="modalEstoque" class="modal"><div class="modal-content"><h3 id="modalEstoqueTitle">➕ Novo Estoque</h3><input type="text" id="estoqueNome" placeholder="Nome do Estoque"><input type="number" id="estoqueQuantidade" placeholder="Quantidade (unidades)"><input type="number" id="estoqueValorUnitario" step="0.01" placeholder="Valor por unidade (R$)"><div class="modal-buttons"><button id="btnSalvarEstoque" onclick="salvarEstoque()">Salvar</button><button onclick="fecharModalEstoque()">Cancelar</button></div></div></div>
+
+    <!-- Modais de Cliente -->
+    <div id="modalEditarCliente" class="modal"><div class="modal-content"><h3>✏️ Editar Cliente</h3><input type="text" id="editClienteNome" placeholder="Nome"><input type="text" id="editClienteTelefone" placeholder="Telefone"><div class="modal-buttons"><button onclick="salvarEdicaoCliente()">Salvar</button><button onclick="fecharModalEditarCliente()">Cancelar</button></div></div></div>
+    
+    <!-- NOVO MODAL PARA GERAR BOLETO COM DATA E BOTÕES -->
+    <div id="modalGerarBoleto" class="modal">
+        <div class="modal-content">
+            <h3>📄 Gerar Boleto Digital</h3>
+            <div class="form-group">
+                <label>Data de Vencimento</label>
+                <input type="date" id="boletoVencimento" required>
+            </div>
+            <p style="margin: 10px 0;">Valor do débito: <strong id="boletoValorDisplay2">R$ 0,00</strong></p>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="gerarPDFBoleto2()">📄 Gerar Boleto</button>
+                <button class="btn-primary" style="background: #2ec4b6; border-color: #2ec4b6;" onclick="copiarChavePix()">📋 Copiar Chave Pix</button>
+            </div>
+            <div class="modal-buttons">
+                <button onclick="fecharModalGerarBoleto()">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <!-- DASHBOARD -->
@@ -177,7 +347,7 @@
         <!-- GASTOS -->
         <section id="view-gastos" class="view-section"><div class="grid-2"><div class="chart-box"><h3 style="color:var(--dourado);">Lançar Nova Despesa</h3><form id="formGasto" onsubmit="salvarGasto(event)"><div class="form-group"><label>Nome do Gasto</label><input type="text" id="gastoNome" required></div><div class="form-group"><label>Valor (R$)</label><input type="number" step="0.01" id="gastoValor" required></div><div class="form-group"><label>Categoria</label><select id="gastoCategoria"><option>Operacional</option><option>Logística</option><option>Marketing</option><option>Infraestrutura</option><option>Outros</option></select></div><div class="form-group"><label>Data</label><input type="date" id="gastoData" required></div><div class="form-group"><label>Observações</label><textarea id="gastoObs" rows="2"></textarea></div><button type="submit" class="btn-primary">Registrar Gasto</button></form></div><div><h3>Histórico de Despesas</h3><div class="search-filter-box"><input type="text" id="buscaGasto" placeholder="Pesquisar..." oninput="renderizarGastos()"><select id="filtroCategoriaGasto" onchange="renderizarGastos()"><option value="">Todas</option><option>Operacional</option><option>Logística</option><option>Marketing</option></select></div><div class="card-list" id="listaGastos"></div></div></div></section>
 
-        <!-- PRODUTOS - APENAS PRODUTO SIMPLES -->
+        <!-- PRODUTOS -->
         <section id="view-produtos" class="view-section">
             <div class="grid-2">
                 <div class="chart-box">
@@ -197,7 +367,6 @@
                     <div class="search-filter-box"><input type="text" id="buscaProdutoLista" placeholder="Buscar..." oninput="renderizarListaProdutos()"></div>
                     <div class="card-list" id="listaProdutosCadastrados"></div>
                     <small>💡 Arraste os produtos pelo ícone ⋮⋮ para reorganizar</small>
-                    <!-- GERENCIAR ESTOQUES -->
                     <div class="estoque-list">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <h4>📦 Gerenciar Estoques</h4>
@@ -210,7 +379,7 @@
             </div>
         </section>
 
-        <!-- VENDAS - IDÊNTICO AO ORIGINAL -->
+        <!-- VENDAS -->
         <section id="view-vendas" class="view-section">
             <div class="grid-2">
                 <div class="chart-box">
@@ -270,25 +439,20 @@
 
         let charts = {}, carrinhoAtual = {}, tipoPagamentoSelecionado = 'avista', produtoEditandoId = null;
 
-        // ====================== FUNÇÕES DE ESTOQUE (MODIFICADAS) ======================
-        // Agora 'custoTotal' é calculado como quantidade * valorUnitario
+        // ====================== FUNÇÕES DE ESTOQUE ======================
         function atualizarCustoUnitario(estoque) {
-            // O custoUnitario já é armazenado diretamente (valor por unidade)
-            // Mas garantimos que esteja consistente
             if (estoque.quantidade > 0 && estoque.custoTotal > 0) {
                 estoque.custoUnitario = estoque.custoTotal / estoque.quantidade;
             } else {
                 estoque.custoUnitario = 0;
             }
         }
-
         function carregarSelectEstoques(selectId, valorSelecionado = null) {
             let select = document.getElementById(selectId);
             if (!select) return;
             select.innerHTML = db.estoques.map(e => `<option value="${e.id}" ${valorSelecionado == e.id ? 'selected' : ''}>${e.nome} (${e.quantidade} unid., R$ ${e.custoUnitario.toFixed(2)}/unid)</option>`).join('');
             if (db.estoques.length === 0) select.innerHTML = '<option disabled>Nenhum estoque cadastrado</option>';
         }
-
         function renderizarListaEstoques() {
             let container = document.getElementById('listaEstoques');
             if (!container) return;
@@ -303,231 +467,195 @@
             `).join('');
             if (db.estoques.length === 0) container.innerHTML = '<div>Nenhum estoque. Clique em "+ Novo Estoque".</div>';
         }
-
         let estoqueEditandoId = null;
-        function abrirModalNovoEstoque() {
-            estoqueEditandoId = null;
-            document.getElementById('modalEstoqueTitle').innerText = '➕ Novo Estoque';
-            document.getElementById('estoqueNome').value = '';
-            document.getElementById('estoqueQuantidade').value = '';
-            document.getElementById('estoqueValorUnitario').value = '';
-            document.getElementById('modalEstoque').style.display = 'flex';
-        }
-        function editarEstoque(id) {
-            let estq = db.estoques.find(e => e.id === id);
-            if (!estq) return;
-            estoqueEditandoId = id;
-            document.getElementById('modalEstoqueTitle').innerText = '✏️ Editar Estoque';
-            document.getElementById('estoqueNome').value = estq.nome;
-            document.getElementById('estoqueQuantidade').value = estq.quantidade;
-            document.getElementById('estoqueValorUnitario').value = estq.custoUnitario;
-            document.getElementById('modalEstoque').style.display = 'flex';
-        }
+        function abrirModalNovoEstoque() { estoqueEditandoId = null; document.getElementById('modalEstoqueTitle').innerText = '➕ Novo Estoque'; document.getElementById('estoqueNome').value = ''; document.getElementById('estoqueQuantidade').value = ''; document.getElementById('estoqueValorUnitario').value = ''; document.getElementById('modalEstoque').style.display = 'flex'; }
+        function editarEstoque(id) { let estq = db.estoques.find(e => e.id === id); if (!estq) return; estoqueEditandoId = id; document.getElementById('modalEstoqueTitle').innerText = '✏️ Editar Estoque'; document.getElementById('estoqueNome').value = estq.nome; document.getElementById('estoqueQuantidade').value = estq.quantidade; document.getElementById('estoqueValorUnitario').value = estq.custoUnitario; document.getElementById('modalEstoque').style.display = 'flex'; }
         function fecharModalEstoque() { document.getElementById('modalEstoque').style.display = 'none'; }
         function salvarEstoque() {
             let nome = document.getElementById('estoqueNome').value.trim();
             let qtd = parseInt(document.getElementById('estoqueQuantidade').value);
             let valorUnitario = parseFloat(document.getElementById('estoqueValorUnitario').value);
-            if (!nome || isNaN(qtd) || qtd <= 0 || isNaN(valorUnitario) || valorUnitario <= 0) {
-                alert('Preencha todos os campos corretamente. Quantidade e Valor por unidade devem ser maiores que zero.');
-                return;
-            }
+            if (!nome || isNaN(qtd) || qtd <= 0 || isNaN(valorUnitario) || valorUnitario <= 0) { alert('Preencha todos os campos corretamente. Quantidade e Valor por unidade devem ser maiores que zero.'); return; }
             let custoTotal = qtd * valorUnitario;
-            if (estoqueEditandoId) {
-                let estq = db.estoques.find(e => e.id === estoqueEditandoId);
-                if (estq) {
-                    estq.nome = nome;
-                    estq.quantidade = qtd;
-                    estq.custoTotal = custoTotal;
-                    estq.custoUnitario = valorUnitario;
-                }
-            } else {
-                let novoEstoque = { id: Date.now(), nome, quantidade: qtd, custoTotal, custoUnitario: valorUnitario };
-                db.estoques.push(novoEstoque);
-            }
-            salvarDB();
-            fecharModalEstoque();
+            if (estoqueEditandoId) { let estq = db.estoques.find(e => e.id === estoqueEditandoId); if (estq) { estq.nome = nome; estq.quantidade = qtd; estq.custoTotal = custoTotal; estq.custoUnitario = valorUnitario; } }
+            else { db.estoques.push({ id: Date.now(), nome, quantidade: qtd, custoTotal, custoUnitario: valorUnitario }); }
+            salvarDB(); fecharModalEstoque();
         }
-        function excluirEstoque(id) {
-            if (db.estoques.length === 1) { alert('Você precisa ter pelo menos um estoque. Crie outro antes de excluir este.'); return; }
-            let produtosVinculados = db.produtos.some(p => p.estoqueId === id);
-            if (produtosVinculados) { alert('Este estoque possui produtos vinculados. Transfira os produtos para outro estoque antes de excluir.'); return; }
-            db.estoques = db.estoques.filter(e => e.id !== id);
-            salvarDB();
-        }
+        function excluirEstoque(id) { if (db.estoques.length === 1) { alert('Você precisa ter pelo menos um estoque. Crie outro antes de excluir este.'); return; } if (db.produtos.some(p => p.estoqueId === id)) { alert('Este estoque possui produtos vinculados. Transfira os produtos para outro estoque antes de excluir.'); return; } db.estoques = db.estoques.filter(e => e.id !== id); salvarDB(); }
 
         // ====================== PRODUTOS ======================
-        function salvarProdutoSimples(e) {
-            e.preventDefault();
-            let nome = document.getElementById('prodNomeSimples').value;
-            let venda = parseFloat(document.getElementById('prodVendaSimples').value);
-            let estoqueId = parseInt(document.getElementById('prodEstoqueIdSimples').value);
-            if (!nome || isNaN(venda) || venda <= 0 || !estoqueId) { alert('Preencha todos os campos'); return; }
-            db.produtos.push({ id: Date.now(), nome, venda, estoqueId });
-            db.ordemProdutos.push(db.produtos[db.produtos.length-1].id);
-            salvarDB();
-            document.getElementById('formProdutoSimples').reset();
-            alert('Produto adicionado');
-        }
-
-        function renderizarListaProdutos() {
-            let busca = document.getElementById('buscaProdutoLista')?.value.toLowerCase() || '';
-            let ordenados = db.ordemProdutos.map(id => db.produtos.find(p => p.id === id)).filter(p => p);
-            let filtrados = ordenados.filter(p => p.nome.toLowerCase().includes(busca));
-            document.getElementById('listaProdutosCadastrados').innerHTML = filtrados.map(p => {
-                let estoque = db.estoques.find(e => e.id === p.estoqueId);
-                let estoqueNome = estoque ? estoque.nome : 'Sem estoque';
-                let qtdEstoque = estoque ? estoque.quantidade : 0;
-                return `<div class="item-row drag-item-row" draggable="true" data-id="${p.id}"><div style="display:flex; align-items:center; flex:1;"><span class="drag-handle">⋮⋮</span><div class="item-info"><h4>${p.nome}</h4><p>Venda: R$ ${p.venda.toFixed(2)} | Estoque: ${estoqueNome} (${qtdEstoque} unid.)</p></div></div><div class="item-meta"><button class="edit-btn" onclick="abrirModalEdicao(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Editar</button><button class="delete-btn" onclick="deletarProduto(${p.id})">🗑️ Excluir</button></div></div>`;
-            }).join('');
-            // drag and drop
-            document.querySelectorAll('.drag-item-row').forEach(el => {
-                el.setAttribute('draggable', 'true');
-                el.addEventListener('dragstart', handleDragStart);
-                el.addEventListener('dragover', handleDragOver);
-                el.addEventListener('drop', handleDrop);
-            });
-        }
-
-        function abrirModalEdicao(prod) {
-            produtoEditandoId = prod.id;
-            document.getElementById('editProdNome').value = prod.nome;
-            document.getElementById('editProdVenda').value = prod.venda;
-            carregarSelectEstoques('editProdEstoqueId', prod.estoqueId);
-            document.getElementById('modalEditarProduto').style.display = 'flex';
-        }
+        function salvarProdutoSimples(e) { e.preventDefault(); let nome = document.getElementById('prodNomeSimples').value; let venda = parseFloat(document.getElementById('prodVendaSimples').value); let estoqueId = parseInt(document.getElementById('prodEstoqueIdSimples').value); if (!nome || isNaN(venda) || venda <= 0 || !estoqueId) { alert('Preencha todos os campos'); return; } db.produtos.push({ id: Date.now(), nome, venda, estoqueId }); db.ordemProdutos.push(db.produtos[db.produtos.length-1].id); salvarDB(); document.getElementById('formProdutoSimples').reset(); alert('Produto adicionado'); }
+        function renderizarListaProdutos() { let busca = document.getElementById('buscaProdutoLista')?.value.toLowerCase() || ''; let ordenados = db.ordemProdutos.map(id => db.produtos.find(p => p.id === id)).filter(p => p); let filtrados = ordenados.filter(p => p.nome.toLowerCase().includes(busca)); document.getElementById('listaProdutosCadastrados').innerHTML = filtrados.map(p => { let estoque = db.estoques.find(e => e.id === p.estoqueId); let estoqueNome = estoque ? estoque.nome : 'Sem estoque'; let qtdEstoque = estoque ? estoque.quantidade : 0; return `<div class="item-row drag-item-row" draggable="true" data-id="${p.id}"><div style="display:flex; align-items:center; flex:1;"><span class="drag-handle">⋮⋮</span><div class="item-info"><h4>${p.nome}</h4><p>Venda: R$ ${p.venda.toFixed(2)} | Estoque: ${estoqueNome} (${qtdEstoque} unid.)</p></div></div><div class="item-meta"><button class="edit-btn" onclick="abrirModalEdicao(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Editar</button><button class="delete-btn" onclick="deletarProduto(${p.id})">🗑️ Excluir</button></div></div>`; }).join(''); document.querySelectorAll('.drag-item-row').forEach(el => { el.setAttribute('draggable', 'true'); el.addEventListener('dragstart', handleDragStart); el.addEventListener('dragover', handleDragOver); el.addEventListener('drop', handleDrop); }); }
+        function abrirModalEdicao(prod) { produtoEditandoId = prod.id; document.getElementById('editProdNome').value = prod.nome; document.getElementById('editProdVenda').value = prod.venda; carregarSelectEstoques('editProdEstoqueId', prod.estoqueId); document.getElementById('modalEditarProduto').style.display = 'flex'; }
         function fecharModalEdicao() { document.getElementById('modalEditarProduto').style.display = 'none'; produtoEditandoId = null; }
-        function salvarEdicaoProduto() {
-            let p = db.produtos.find(prod => prod.id === produtoEditandoId);
-            if (p) {
-                p.nome = document.getElementById('editProdNome').value;
-                p.venda = parseFloat(document.getElementById('editProdVenda').value);
-                p.estoqueId = parseInt(document.getElementById('editProdEstoqueId').value);
-                salvarDB();
-                fecharModalEdicao();
-                alert('Produto atualizado');
-            }
-        }
-        function deletarProduto(id) {
-            if (confirm('Excluir produto?')) {
-                db.produtos = db.produtos.filter(p => p.id !== id);
-                db.ordemProdutos = db.ordemProdutos.filter(oid => oid !== id);
-                salvarDB();
-            }
-        }
+        function salvarEdicaoProduto() { let p = db.produtos.find(prod => prod.id === produtoEditandoId); if (p) { p.nome = document.getElementById('editProdNome').value; p.venda = parseFloat(document.getElementById('editProdVenda').value); p.estoqueId = parseInt(document.getElementById('editProdEstoqueId').value); salvarDB(); fecharModalEdicao(); alert('Produto atualizado'); } }
+        function deletarProduto(id) { if (confirm('Excluir produto?')) { db.produtos = db.produtos.filter(p => p.id !== id); db.ordemProdutos = db.ordemProdutos.filter(oid => oid !== id); salvarDB(); } }
         let dragSrcId = null;
         function handleDragStart(e) { dragSrcId = parseInt(e.target.closest('.drag-item-row').dataset.id); e.dataTransfer.effectAllowed = 'move'; }
         function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
-        function handleDrop(e) {
-            e.preventDefault();
-            const targetEl = e.target.closest('.drag-item-row');
-            if (!targetEl) return;
-            const targetId = parseInt(targetEl.dataset.id);
-            if (dragSrcId === targetId) return;
-            const srcIndex = db.ordemProdutos.indexOf(dragSrcId);
-            const targetIndex = db.ordemProdutos.indexOf(targetId);
-            if (srcIndex !== -1 && targetIndex !== -1) {
-                db.ordemProdutos.splice(srcIndex, 1);
-                db.ordemProdutos.splice(targetIndex, 0, dragSrcId);
-                salvarDB();
-            }
-        }
+        function handleDrop(e) { e.preventDefault(); const targetEl = e.target.closest('.drag-item-row'); if (!targetEl) return; const targetId = parseInt(targetEl.dataset.id); if (dragSrcId === targetId) return; const srcIndex = db.ordemProdutos.indexOf(dragSrcId); const targetIndex = db.ordemProdutos.indexOf(targetId); if (srcIndex !== -1 && targetIndex !== -1) { db.ordemProdutos.splice(srcIndex, 1); db.ordemProdutos.splice(targetIndex, 0, dragSrcId); salvarDB(); } }
 
         // ====================== VENDAS ======================
-        function renderizarProdutosVenda() {
-            let container = document.getElementById('listaProdutosVenda');
-            if (!container) return;
-            let ordenados = db.ordemProdutos.map(id => db.produtos.find(p => p.id === id)).filter(p => p);
-            container.innerHTML = ordenados.map(p => {
-                let estoque = db.estoques.find(e => e.id === p.estoqueId);
-                let disponivel = estoque ? estoque.quantidade : 0;
-                return `<div class="item-row"><div><strong>${p.nome}</strong><br><small>R$ ${p.venda.toFixed(2)}</small></div><div class="quantidade-controle"><button onclick="alterarQuantidade(${p.id},-1)">-</button><span id="qtd-${p.id}">${carrinhoAtual[p.id] || 0}</span><button onclick="alterarQuantidade(${p.id},1)">+</button></div></div>`;
-            }).join('');
-        }
-        function alterarQuantidade(pid, delta) {
-            let p = db.produtos.find(prod => prod.id === pid);
-            if (!p) return;
-            let estoque = db.estoques.find(e => e.id === p.estoqueId);
-            if (!estoque) return;
-            let nova = (carrinhoAtual[pid] || 0) + delta;
-            if (nova < 0) nova = 0;
-            if (nova > estoque.quantidade) return;
-            carrinhoAtual[pid] = nova;
-            document.getElementById(`qtd-${pid}`).textContent = nova;
-            if (nova === 0) delete carrinhoAtual[pid];
-            atualizarResumoVenda();
-        }
-        function calcularSubtotal() {
-            let subtotal = 0, totalItens = 0;
-            for (let [id, qtd] of Object.entries(carrinhoAtual)) if (qtd > 0) {
-                let p = db.produtos.find(prod => prod.id == id);
-                if (p) { subtotal += p.venda * qtd; totalItens += qtd; }
-            }
-            return { subtotal, totalItens };
-        }
-        function atualizarResumoVenda() {
-            let { subtotal, totalItens } = calcularSubtotal();
-            document.getElementById('totalItens').textContent = totalItens;
-            document.getElementById('subtotalVenda').innerHTML = `R$ ${subtotal.toFixed(2)}`;
-            document.getElementById('totalVendaValor').innerHTML = `R$ ${subtotal.toFixed(2)}`;
-            let clienteId = document.getElementById('clienteVendaSelect').value;
-            let debitoInfo = document.getElementById('debitoInfo');
-            if (clienteId !== 'avulso' && tipoPagamentoSelecionado === 'fiado') {
-                let cliente = db.clientes.find(c => c.id == clienteId);
-                if (cliente) {
-                    debitoInfo.style.display = 'block';
-                    document.getElementById('debitoAtual').innerHTML = `R$ ${cliente.debito.toFixed(2)}`;
-                    document.getElementById('novoDebito').innerHTML = `R$ ${(cliente.debito + subtotal).toFixed(2)}`;
-                }
-            } else debitoInfo.style.display = 'none';
-        }
-        function finalizarVenda() {
-            const clienteId = document.getElementById('clienteVendaSelect').value;
-            let itensVenda = [], valorTotal = 0, custoTotal = 0;
-            for (let [pid, qtd] of Object.entries(carrinhoAtual)) if (qtd > 0) {
-                let prod = db.produtos.find(p => p.id == pid);
-                if (!prod) continue;
-                let estoque = db.estoques.find(e => e.id === prod.estoqueId);
-                if (!estoque || estoque.quantidade < qtd) {
-                    alert(`Estoque insuficiente para ${prod.nome}. Disponível: ${estoque ? estoque.quantidade : 0}`);
-                    return;
-                }
-                let custoUnitario = estoque.custoUnitario;
-                valorTotal += prod.venda * qtd;
-                custoTotal += custoUnitario * qtd;
-                itensVenda.push({ produtoId: prod.id, nome: prod.nome, qtd, valor: prod.venda * qtd, custoUnitario });
-                // abater do estoque
-                estoque.quantidade -= qtd;
-                estoque.custoTotal = estoque.quantidade * estoque.custoUnitario; // atualiza total
-            }
-            if (itensVenda.length === 0) { alert('Carrinho vazio'); return; }
-            let clienteNome = 'Cliente Avulso';
-            if (tipoPagamentoSelecionado === 'fiado') {
-                if (clienteId === 'avulso') { alert('Selecione um cliente para fiado'); return; }
-                let cli = db.clientes.find(c => c.id == clienteId);
-                if (cli) { cli.debito = (cli.debito || 0) + valorTotal; cli.dataUltimaCompra = new Date().toISOString(); clienteNome = cli.nome; }
-                registrarVenda(clienteId === 'avulso' ? null : clienteId, clienteNome, itensVenda, valorTotal, custoTotal, 'fiado');
-                carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente();
-                alert(`✅ Venda fiado: R$ ${valorTotal.toFixed(2)} para ${clienteNome}`);
-            } else {
-                let nomeCliente = (clienteId !== 'avulso' && db.clientes.find(c=>c.id==clienteId)) ? db.clientes.find(c=>c.id==clienteId).nome : 'Cliente Avulso';
-                mostrarEscolhaPagamento(valorTotal,
-                    () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'dinheiro'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Venda em DINHEIRO: R$ ${valorTotal.toFixed(2)}`); },
-                    () => { exibirModalPix(valorTotal, () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'pix'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Pagamento PIX confirmado! Valor: R$ ${valorTotal.toFixed(2)}`); }); }
-                );
-            }
-        }
-        function registrarVenda(clienteId, clienteNome, itens, valorTotal, custoTotal, metodo) { 
-            db.vendas.push({ id: Date.now(), clienteId, clienteNome, itens, valorTotal, custoTotal, data: new Date().toISOString(), tipo: metodo }); 
-            salvarDB(); 
-        }
+        function renderizarProdutosVenda() { let container = document.getElementById('listaProdutosVenda'); if (!container) return; let ordenados = db.ordemProdutos.map(id => db.produtos.find(p => p.id === id)).filter(p => p); container.innerHTML = ordenados.map(p => { let estoque = db.estoques.find(e => e.id === p.estoqueId); let disponivel = estoque ? estoque.quantidade : 0; return `<div class="item-row"><div><strong>${p.nome}</strong><br><small>R$ ${p.venda.toFixed(2)}</small></div><div class="quantidade-controle"><button onclick="alterarQuantidade(${p.id},-1)">-</button><span id="qtd-${p.id}">${carrinhoAtual[p.id] || 0}</span><button onclick="alterarQuantidade(${p.id},1)">+</button></div></div>`; }).join(''); }
+        function alterarQuantidade(pid, delta) { let p = db.produtos.find(prod => prod.id === pid); if (!p) return; let estoque = db.estoques.find(e => e.id === p.estoqueId); if (!estoque) return; let nova = (carrinhoAtual[pid] || 0) + delta; if (nova < 0) nova = 0; if (nova > estoque.quantidade) return; carrinhoAtual[pid] = nova; document.getElementById(`qtd-${pid}`).textContent = nova; if (nova === 0) delete carrinhoAtual[pid]; atualizarResumoVenda(); }
+        function calcularSubtotal() { let subtotal = 0, totalItens = 0; for (let [id, qtd] of Object.entries(carrinhoAtual)) if (qtd > 0) { let p = db.produtos.find(prod => prod.id == id); if (p) { subtotal += p.venda * qtd; totalItens += qtd; } } return { subtotal, totalItens }; }
+        function atualizarResumoVenda() { let { subtotal, totalItens } = calcularSubtotal(); document.getElementById('totalItens').textContent = totalItens; document.getElementById('subtotalVenda').innerHTML = `R$ ${subtotal.toFixed(2)}`; document.getElementById('totalVendaValor').innerHTML = `R$ ${subtotal.toFixed(2)}`; let clienteId = document.getElementById('clienteVendaSelect').value; let debitoInfo = document.getElementById('debitoInfo'); if (clienteId !== 'avulso' && tipoPagamentoSelecionado === 'fiado') { let cliente = db.clientes.find(c => c.id == clienteId); if (cliente) { debitoInfo.style.display = 'block'; document.getElementById('debitoAtual').innerHTML = `R$ ${cliente.debito.toFixed(2)}`; document.getElementById('novoDebito').innerHTML = `R$ ${(cliente.debito + subtotal).toFixed(2)}`; } } else debitoInfo.style.display = 'none'; }
+        function finalizarVenda() { const clienteId = document.getElementById('clienteVendaSelect').value; let itensVenda = [], valorTotal = 0, custoTotal = 0; for (let [pid, qtd] of Object.entries(carrinhoAtual)) if (qtd > 0) { let prod = db.produtos.find(p => p.id == pid); if (!prod) continue; let estoque = db.estoques.find(e => e.id === prod.estoqueId); if (!estoque || estoque.quantidade < qtd) { alert(`Estoque insuficiente para ${prod.nome}. Disponível: ${estoque ? estoque.quantidade : 0}`); return; } let custoUnitario = estoque.custoUnitario; valorTotal += prod.venda * qtd; custoTotal += custoUnitario * qtd; itensVenda.push({ produtoId: prod.id, nome: prod.nome, qtd, valor: prod.venda * qtd, custoUnitario }); estoque.quantidade -= qtd; estoque.custoTotal = estoque.quantidade * estoque.custoUnitario; } if (itensVenda.length === 0) { alert('Carrinho vazio'); return; } let clienteNome = 'Cliente Avulso'; if (tipoPagamentoSelecionado === 'fiado') { if (clienteId === 'avulso') { alert('Selecione um cliente para fiado'); return; } let cli = db.clientes.find(c => c.id == clienteId); if (cli) { cli.debito = (cli.debito || 0) + valorTotal; cli.dataUltimaCompra = new Date().toISOString(); clienteNome = cli.nome; } registrarVenda(clienteId === 'avulso' ? null : clienteId, clienteNome, itensVenda, valorTotal, custoTotal, 'fiado'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Venda fiado: R$ ${valorTotal.toFixed(2)} para ${clienteNome}`); } else { let nomeCliente = (clienteId !== 'avulso' && db.clientes.find(c=>c.id==clienteId)) ? db.clientes.find(c=>c.id==clienteId).nome : 'Cliente Avulso'; mostrarEscolhaPagamento(valorTotal, () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'dinheiro'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Venda em DINHEIRO: R$ ${valorTotal.toFixed(2)}`); }, () => { exibirModalPix(valorTotal, () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'pix'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Pagamento PIX confirmado! Valor: R$ ${valorTotal.toFixed(2)}`); }); }); } }
+        function registrarVenda(clienteId, clienteNome, itens, valorTotal, custoTotal, metodo) { db.vendas.push({ id: Date.now(), clienteId, clienteNome, itens, valorTotal, custoTotal, data: new Date().toISOString(), tipo: metodo }); salvarDB(); }
 
         // ====================== GASTOS, CLIENTES, PIX, DASHBOARD ======================
         function salvarGasto(e) { e.preventDefault(); db.gastos.push({ id: Date.now(), nome: document.getElementById('gastoNome').value, valor: parseFloat(document.getElementById('gastoValor').value), categoria: document.getElementById('gastoCategoria').value, data: document.getElementById('gastoData').value, obs: document.getElementById('gastoObs').value }); salvarDB(); document.getElementById('formGasto').reset(); }
         function renderizarGastos() { let busca = document.getElementById('buscaGasto')?.value.toLowerCase() || '', cat = document.getElementById('filtroCategoriaGasto')?.value || ''; let filtrados = db.gastos.filter(g => g.nome.toLowerCase().includes(busca)); if (cat) filtrados = filtrados.filter(g => g.categoria === cat); document.getElementById('listaGastos').innerHTML = filtrados.map(g => `<div class="item-row"><div><strong>${g.nome}</strong><br><small>${g.categoria} - ${g.data || 'Sem data'}</small></div><div class="item-meta"><strong>R$ ${g.valor.toFixed(2)}</strong><br><button onclick="deletarGasto(${g.id})" style="background:none; border:none; color:var(--erro); cursor:pointer;">🗑️</button></div></div>`).join(''); }
         function deletarGasto(id) { if(confirm('Deletar gasto?')) { db.gastos = db.gastos.filter(g => g.id !== id); salvarDB(); } }
         function salvarCliente(e) { e.preventDefault(); db.clientes.push({ id: Date.now(), nome: document.getElementById('cliNome').value, telefone: document.getElementById('cliTelefone').value, debito: 0, dataUltimaCompra: null }); salvarDB(); document.getElementById('formCliente').reset(); alert('Cliente registrado'); }
-        function renderizarClientes() { let busca = document.getElementById('buscaCliente')?.value.toLowerCase() || ''; let filtrados = db.clientes.filter(c => c.nome.toLowerCase().includes(busca)); document.getElementById('listaClientes').innerHTML = filtrados.map(c => `<div class="item-row"><div><strong>${c.nome}</strong><br><small>${c.telefone || ''}</small></div><div class="item-meta"><strong style="color:var(--erro);">Débito: R$ ${(c.debito || 0).toFixed(2)}</strong><div style="display:flex; gap:5px; margin-top:5px; flex-wrap:wrap;"><button onclick="adicionarDebito(${c.id})">+ Débito</button><button onclick="pagarDebitoComEscolha(${c.id})">Pagar</button><button onclick="aplicarJurosCliente(${c.id})">📈 Juros</button><button onclick="deletarCliente(${c.id})">🗑️</button></div></div></div>`).join(''); }
+
+        // EDIÇÃO DE CLIENTE E BOLETO (com data e botões)
+        let clienteEditandoId = null;
+        function abrirModalEditarCliente(id) { let cli = db.clientes.find(c => c.id === id); if (!cli) return; clienteEditandoId = id; document.getElementById('editClienteNome').value = cli.nome; document.getElementById('editClienteTelefone').value = cli.telefone || ''; document.getElementById('modalEditarCliente').style.display = 'flex'; }
+        function salvarEdicaoCliente() { let cli = db.clientes.find(c => c.id === clienteEditandoId); if (cli) { cli.nome = document.getElementById('editClienteNome').value; cli.telefone = document.getElementById('editClienteTelefone').value; salvarDB(); fecharModalEditarCliente(); } }
+        function fecharModalEditarCliente() { document.getElementById('modalEditarCliente').style.display = 'none'; clienteEditandoId = null; }
+
+        // Novo modal para gerar boleto com data
+        function abrirModalGerarBoleto(clienteId) {
+            let cli = db.clientes.find(c => c.id === clienteId);
+            if (!cli) return;
+            clienteEditandoId = clienteId;
+            let valorDebito = cli.debito || 0;
+            if (valorDebito <= 0) {
+                alert('Este cliente não possui débito para gerar boleto.');
+                return;
+            }
+            document.getElementById('boletoValorDisplay2').innerText = `R$ ${valorDebito.toFixed(2)}`;
+            // Define data padrão para 7 dias à frente
+            let hoje = new Date();
+            hoje.setDate(hoje.getDate() + 7);
+            document.getElementById('boletoVencimento').value = hoje.toISOString().split('T')[0];
+            document.getElementById('modalGerarBoleto').style.display = 'flex';
+        }
+        function fecharModalGerarBoleto() { document.getElementById('modalGerarBoleto').style.display = 'none'; clienteEditandoId = null; }
+
+        // Função para gerar PDF com a data escolhida
+        async function gerarPDFBoleto2() {
+            let cli = db.clientes.find(c => c.id === clienteEditandoId);
+            if (!cli) { alert('Cliente não encontrado'); fecharModalGerarBoleto(); return; }
+            let valor = cli.debito || 0;
+            if (valor <= 0) { alert('Este cliente não possui débito.'); fecharModalGerarBoleto(); return; }
+            let dataVencimento = document.getElementById('boletoVencimento').value;
+            if (!dataVencimento) { alert('Selecione uma data de vencimento.'); return; }
+            let dataFormatada = new Date(dataVencimento).toLocaleDateString('pt-BR');
+            fecharModalGerarBoleto();
+
+            let pixPayload = gerarPayloadPix(valor);
+            if (!pixPayload) {
+                alert('❌ Erro ao gerar payload Pix. Verifique as configurações da chave Pix.');
+                return;
+            }
+
+            let nomePreto = db.config.nomePreto || 'NEXIS';
+            let nomeDourado = db.config.nomeDourado || 'PREMIUM';
+
+            let boletoDiv = document.createElement('div');
+            boletoDiv.className = 'boleto-digital';
+            boletoDiv.style.width = '400px';
+            boletoDiv.style.background = 'white';
+            boletoDiv.style.color = '#1a1a1a';
+            boletoDiv.style.padding = '24px';
+            boletoDiv.style.borderRadius = '20px';
+            boletoDiv.innerHTML = `
+                <div class="header">
+                    <h2><span style="color: #1a1a1a;">${nomePreto}</span> <span style="color: #c5a880;">${nomeDourado}</span></h2>
+                    <div class="titulo-boleto">BOLETO DIGITAL • PIX</div>
+                </div>
+                <div class="info-linha">
+                    <span class="info-label">Pagador</span>
+                    <span class="info-value">${cli.nome.toUpperCase()}</span>
+                </div>
+                <div class="info-linha">
+                    <span class="info-label">Vencimento</span>
+                    <span class="info-value">${dataFormatada}</span>
+                </div>
+                <div class="valor-destaque">
+                    <div class="label">Valor a pagar</div>
+                    <div class="valor">R$ ${valor.toFixed(2)}</div>
+                </div>
+                <div class="qrcode-area">
+                    <div style="font-size: 12px; margin-bottom: 6px;">📱 Pagamento via Pix</div>
+                    <div id="qrCodeBoleto" style="display: flex; justify-content: center; margin: 8px 0;"></div>
+                    <p>Escaneie o QR Code com seu banco</p>
+                </div>
+                <div class="footer">
+                    <strong>Obrigado pela preferência!</strong>
+                </div>
+            `;
+            document.body.appendChild(boletoDiv);
+
+            new QRCode(document.getElementById("qrCodeBoleto"), {
+                text: pixPayload,
+                width: 140,
+                height: 140,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            try {
+                const canvas = await html2canvas(boletoDiv, { scale: 2, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const imgWidth = 180;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 15, 20, imgWidth, imgHeight);
+                pdf.save(`boleto_digital_${cli.nome.replace(/\s/g, '_')}.pdf`);
+                alert('✅ Boleto Digital gerado com sucesso!');
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao gerar PDF. Tente novamente.');
+            } finally {
+                document.body.removeChild(boletoDiv);
+            }
+        }
+
+        // Função para copiar a chave Pix (payload) com o valor da dívida
+        function copiarChavePix() {
+            let cli = db.clientes.find(c => c.id === clienteEditandoId);
+            if (!cli) { alert('Cliente não encontrado'); return; }
+            let valor = cli.debito || 0;
+            if (valor <= 0) { alert('Cliente sem débito.'); return; }
+            let pixPayload = gerarPayloadPix(valor);
+            if (!pixPayload) {
+                alert('❌ Erro ao gerar payload Pix. Verifique as configurações da chave Pix.');
+                return;
+            }
+            navigator.clipboard.writeText(pixPayload).then(() => {
+                alert('✅ Chave Pix copiada para a área de transferência!');
+            }).catch(() => {
+                alert('❌ Não foi possível copiar. Copie manualmente.');
+            });
+            fecharModalGerarBoleto();
+        }
+
+        function renderizarClientes() { 
+            let busca = document.getElementById('buscaCliente')?.value.toLowerCase() || ''; 
+            let filtrados = db.clientes.filter(c => c.nome.toLowerCase().includes(busca)); 
+            document.getElementById('listaClientes').innerHTML = filtrados.map(c => `
+                <div class="item-row">
+                    <div><strong>${c.nome}</strong><br><small>${c.telefone || ''}</small></div>
+                    <div class="item-meta">
+                        <strong style="color:var(--erro);">Débito: R$ ${(c.debito || 0).toFixed(2)}</strong>
+                        <div class="cliente-actions">
+                            <button class="action-btn debito" onclick="adicionarDebito(${c.id})">+ Débito</button>
+                            <button class="action-btn pagar" onclick="pagarDebitoComEscolha(${c.id})">Pagar</button>
+                            <button class="action-btn juros" onclick="aplicarJurosCliente(${c.id})">📈 Juros</button>
+                            <button class="action-btn excluir" onclick="deletarCliente(${c.id})">🗑️</button>
+                            <button class="action-btn editar" onclick="abrirModalEditarCliente(${c.id})">✏️ Editar</button>
+                            <button class="action-btn boleto" onclick="abrirModalGerarBoleto(${c.id})">📄 Boleto</button>
+                        </div>
+                    </div>
+                </div>
+            `).join(''); 
+        }
         function deletarCliente(id) { if (confirm('Excluir cliente?')) { db.clientes = db.clientes.filter(c => c.id !== id); salvarDB(); } }
         function adicionarDebito(id) { let valor = parseFloat(prompt('Valor do débito (R$):')); if (valor && !isNaN(valor)) { let cliente = db.clientes.find(c => c.id === id); if (cliente) { cliente.debito = (cliente.debito || 0) + valor; if (!cliente.dataUltimaCompra) cliente.dataUltimaCompra = new Date().toISOString(); salvarDB(); } } }
         function pagarDebitoComEscolha(id) { let cliente = db.clientes.find(c => c.id === id); if (!cliente || cliente.debito <= 0) { alert('Cliente sem débito'); return; } let valorPagar = parseFloat(prompt(`Débito atual: R$ ${cliente.debito.toFixed(2)}\nDigite o valor a pagar:`)); if (isNaN(valorPagar) || valorPagar <= 0) return; if (valorPagar > cliente.debito) { alert('Valor maior que o débito'); return; } mostrarEscolhaPagamento(valorPagar, () => { cliente.debito -= valorPagar; if (cliente.debito === 0) cliente.dataUltimaCompra = null; salvarDB(); alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} em DINHEIRO registrado.`); }, () => { exibirModalPix(valorPagar, () => { cliente.debito -= valorPagar; if (cliente.debito === 0) cliente.dataUltimaCompra = null; salvarDB(); alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} via PIX confirmado.`); }); }); }
