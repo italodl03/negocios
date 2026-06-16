@@ -333,13 +333,13 @@
                 <div class="metric-card negative"><div class="metric-title">Gastos Totais</div><div class="metric-value" id="dashGastos" style="color:var(--erro);">R$ 0,00</div></div>
                 <div class="metric-card neutral"><div class="metric-title">Carteira de Fiado</div><div class="metric-value" id="dashFiado">R$ 0,00</div></div>
                 <div class="metric-card"><div class="metric-title">Vendas Realizadas</div><div class="metric-value" id="dashQtdVendas">0</div></div>
-                <div class="metric-card"><div class="metric-title">Clientes Ativos</div><div class="metric-value" id="dashQtdClientes">0</div></div>
                 <div class="metric-card"><div class="metric-title">Itens em Estoque</div><div class="metric-value" id="dashEstoque">0</div></div>
+                <div class="metric-card positive"><div class="metric-title">Total em Pix</div><div class="metric-value" id="dashPix">R$ 0,00</div></div>
+                <div class="metric-card positive"><div class="metric-title">Total em Dinheiro</div><div class="metric-value" id="dashDinheiro">R$ 0,00</div></div>
             </div>
             <div class="charts-grid">
                 <div class="chart-box"><h3>📊 Lucro Líquido vs Despesas</h3><canvas id="chartLucroGasto"></canvas></div>
                 <div class="chart-box"><h3>💸 Despesas por Categoria</h3><canvas id="chartCategoriasDespesa"></canvas></div>
-                <div class="chart-box"><h3>📈 Evolução de Vendas (Mensal)</h3><canvas id="chartEvolucaoVendas"></canvas></div>
                 <div class="chart-box"><h3>🏆 Top Devedores</h3><canvas id="chartMaioresDevedores"></canvas></div>
             </div>
         </section>
@@ -658,16 +658,53 @@
         }
         function deletarCliente(id) { if (confirm('Excluir cliente?')) { db.clientes = db.clientes.filter(c => c.id !== id); salvarDB(); } }
         function adicionarDebito(id) { let valor = parseFloat(prompt('Valor do débito (R$):')); if (valor && !isNaN(valor)) { let cliente = db.clientes.find(c => c.id === id); if (cliente) { cliente.debito = (cliente.debito || 0) + valor; if (!cliente.dataUltimaCompra) cliente.dataUltimaCompra = new Date().toISOString(); salvarDB(); } } }
-        function pagarDebitoComEscolha(id) { let cliente = db.clientes.find(c => c.id === id); if (!cliente || cliente.debito <= 0) { alert('Cliente sem débito'); return; } let valorPagar = parseFloat(prompt(`Débito atual: R$ ${cliente.debito.toFixed(2)}\nDigite o valor a pagar:`)); if (isNaN(valorPagar) || valorPagar <= 0) return; if (valorPagar > cliente.debito) { alert('Valor maior que o débito'); return; } mostrarEscolhaPagamento(valorPagar, () => { cliente.debito -= valorPagar; if (cliente.debito === 0) cliente.dataUltimaCompra = null; salvarDB(); alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} em DINHEIRO registrado.`); }, () => { exibirModalPix(valorPagar, () => { cliente.debito -= valorPagar; if (cliente.debito === 0) cliente.dataUltimaCompra = null; salvarDB(); alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} via PIX confirmado.`); }); }); }
+        
+        // ====== FUNÇÃO ALTERADA: agora registra venda no método escolhido ======
+        function pagarDebitoComEscolha(id) { 
+            let cliente = db.clientes.find(c => c.id === id); 
+            if (!cliente || cliente.debito <= 0) { alert('Cliente sem débito'); return; } 
+            let valorPagar = parseFloat(prompt(`Débito atual: R$ ${cliente.debito.toFixed(2)}\nDigite o valor a pagar:`)); 
+            if (isNaN(valorPagar) || valorPagar <= 0) return; 
+            if (valorPagar > cliente.debito) { alert('Valor maior que o débito'); return; } 
+            mostrarEscolhaPagamento(valorPagar, 
+                // Pagamento em DINHEIRO
+                () => { 
+                    // Cria um item fictício para registrar a venda
+                    let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado)', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
+                    registrarVenda(cliente.id, cliente.nome, itens, valorPagar, 0, 'dinheiro');
+                    cliente.debito -= valorPagar; 
+                    if (cliente.debito === 0) cliente.dataUltimaCompra = null; 
+                    salvarDB(); 
+                    alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} em DINHEIRO registrado.`); 
+                }, 
+                // Pagamento em PIX
+                () => { 
+                    exibirModalPix(valorPagar, () => { 
+                        let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado)', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
+                        registrarVenda(cliente.id, cliente.nome, itens, valorPagar, 0, 'pix');
+                        cliente.debito -= valorPagar; 
+                        if (cliente.debito === 0) cliente.dataUltimaCompra = null; 
+                        salvarDB(); 
+                        alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} via PIX confirmado.`); 
+                    }); 
+                } 
+            ); 
+        }
+        // ====== FIM DA ALTERAÇÃO ======
+
         function calcularJurosDevedor(debito, dataInicial) { if (!debito || debito <= 0) return 0; let diasCarencia = db.config.jurosDiasCarencia || 7, taxa = (db.config.jurosMensal || 5) / 100, tipo = db.config.jurosTipo || 'simples', dataAtual = new Date(), diff = Math.floor((dataAtual - new Date(dataInicial)) / (1000*3600*24)); if (diff <= diasCarencia) return 0; let meses = (diff - diasCarencia) / 30; return tipo === 'simples' ? debito * taxa * meses : debito * (Math.pow(1+taxa, meses) - 1); }
         function aplicarJurosCliente(id) { let cliente = db.clientes.find(c => c.id === id); if (cliente && cliente.debito > 0 && cliente.dataUltimaCompra) { let juros = calcularJurosDevedor(cliente.debito, cliente.dataUltimaCompra); if (juros > 0) { if (confirm(`Aplicar R$ ${juros.toFixed(2)} de juros?`)) { cliente.debito += juros; cliente.dataUltimaCompra = new Date().toISOString(); salvarDB(); } } else alert('Sem juros acumulados'); } }
         function atualizarDashboard() { 
-            let fat = db.vendas.reduce((s,v)=>s+v.valorTotal,0); 
-            let gastos = db.gastos.reduce((s,g)=>s+g.valor,0); 
-            let custo = db.vendas.reduce((s,v)=>s+(v.custoTotal||0),0); 
-            let lucro = fat - gastos - custo; 
-            let fiado = db.clientes.reduce((s,c)=>s+(c.debito||0),0); 
-            let totalEstoque = db.estoques.reduce((s,e)=>s+e.quantidade,0); 
+            // Vendas à vista (dinheiro e pix) – agora inclui pagamentos de débito registrados como venda
+            let vendasAVista = db.vendas.filter(v => v.tipo === 'dinheiro' || v.tipo === 'pix');
+            let fat = vendasAVista.reduce((s,v)=>s+v.valorTotal,0);
+            let custo = vendasAVista.reduce((s,v)=>s+(v.custoTotal||0),0);
+            let totalPix = db.vendas.filter(v=>v.tipo==='pix').reduce((s,v)=>s+v.valorTotal,0);
+            let totalDinheiro = db.vendas.filter(v=>v.tipo==='dinheiro').reduce((s,v)=>s+v.valorTotal,0);
+            let gastos = db.gastos.reduce((s,g)=>s+g.valor,0);
+            let lucro = fat - gastos - custo;
+            let fiado = db.clientes.reduce((s,c)=>s+(c.debito||0),0);
+            let totalEstoque = db.estoques.reduce((s,e)=>s+e.quantidade,0);
             let meta = db.metaFaturamento; 
             let perc = Math.min((fat/meta)*100,100); 
             document.getElementById('dashFaturamento').innerHTML = `R$ ${fat.toFixed(2)}`; 
@@ -675,18 +712,49 @@
             document.getElementById('dashGastos').innerHTML = `R$ ${gastos.toFixed(2)}`; 
             document.getElementById('dashFiado').innerHTML = `R$ ${fiado.toFixed(2)}`; 
             document.getElementById('dashQtdVendas').innerHTML = db.vendas.length; 
-            document.getElementById('dashQtdClientes').innerHTML = db.clientes.length; 
             document.getElementById('dashEstoque').innerHTML = totalEstoque; 
+            document.getElementById('dashPix').innerHTML = `R$ ${totalPix.toFixed(2)}`;
+            document.getElementById('dashDinheiro').innerHTML = `R$ ${totalDinheiro.toFixed(2)}`;
             document.getElementById('goalText').innerHTML = `R$ ${fat.toFixed(2)} / R$ ${meta.toFixed(2)}`; 
             document.getElementById('goalProgress').style.width = `${perc}%`; 
         }
         function atualizarGraficos() { 
+            // Gráfico Lucro vs Despesas
             if (charts.lucroGasto) charts.lucroGasto.destroy(); 
-            let fat = db.vendas.reduce((s,v)=>s+v.valorTotal,0), gastos = db.gastos.reduce((s,g)=>s+g.valor,0), custo = db.vendas.reduce((s,v)=>s+(v.custoTotal||0),0), lucro = fat - gastos - custo; 
+            let fat = db.vendas.filter(v=>v.tipo==='dinheiro'||v.tipo==='pix').reduce((s,v)=>s+v.valorTotal,0);
+            let gastos = db.gastos.reduce((s,g)=>s+g.valor,0);
+            let custo = db.vendas.filter(v=>v.tipo==='dinheiro'||v.tipo==='pix').reduce((s,v)=>s+(v.custoTotal||0),0);
+            let lucro = fat - gastos - custo; 
             charts.lucroGasto = new Chart(document.getElementById('chartLucroGasto'),{type:'bar',data:{labels:['Lucro Líquido','Despesas Totais'],datasets:[{data:[lucro,gastos],backgroundColor:['#2ec4b6','#e71d36']}]}}); 
-            let cats = {}; db.gastos.forEach(g=>cats[g.categoria]=(cats[g.categoria]||0)+g.valor); if(charts.categorias) charts.categorias.destroy(); charts.categorias = new Chart(document.getElementById('chartCategoriasDespesa'),{type:'pie',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:['#c5a880','#2ec4b6','#e71d36','#f4a261']}]}}); 
-            let vendasMes={}; db.vendas.forEach(v=>{let m=v.data?.substring(0,7)||'2024-01'; vendasMes[m]=(vendasMes[m]||0)+v.valorTotal;}); if(charts.vendas) charts.vendas.destroy(); charts.vendas = new Chart(document.getElementById('chartEvolucaoVendas'),{type:'line',data:{labels:Object.keys(vendasMes),datasets:[{data:Object.values(vendasMes),borderColor:'#c5a880',fill:false}]}}); 
-            let devedores = db.clientes.filter(c=>(c.debito||0)>0).slice(0,5); if(charts.devedores) charts.devedores.destroy(); charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c=>c.nome),datasets:[{data:devedores.map(c=>c.debito),backgroundColor:'#e71d36'}]}}); 
+            
+            // Gráfico Despesas por Categoria - só cria se houver dados
+            let cats = {}; 
+            db.gastos.forEach(g=>cats[g.categoria]=(cats[g.categoria]||0)+g.valor); 
+            if (charts.categorias) charts.categorias.destroy();
+            if (Object.keys(cats).length > 0) {
+                charts.categorias = new Chart(document.getElementById('chartCategoriasDespesa'),{type:'pie',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:['#c5a880','#2ec4b6','#e71d36','#f4a261']}]}});
+            } else {
+                let ctx = document.getElementById('chartCategoriasDespesa').getContext('2d');
+                ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+                ctx.fillStyle = '#6c757d';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Nenhuma despesa registrada', ctx.canvas.width/2, ctx.canvas.height/2);
+            }
+
+            // Gráfico Top Devedores
+            let devedores = db.clientes.filter(c=>(c.debito||0)>0).slice(0,5); 
+            if (charts.devedores) charts.devedores.destroy(); 
+            if (devedores.length > 0) {
+                charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c=>c.nome),datasets:[{data:devedores.map(c=>c.debito),backgroundColor:'#e71d36'}]}});
+            } else {
+                let ctx = document.getElementById('chartMaioresDevedores').getContext('2d');
+                ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+                ctx.fillStyle = '#6c757d';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Nenhum devedor', ctx.canvas.width/2, ctx.canvas.height/2);
+            }
         }
         function salvarDB() { localStorage.setItem('nexis_db', JSON.stringify(db)); atualizarDashboard(); renderizarGastos(); renderizarListaProdutos(); renderizarProdutosVenda(); renderizarClientes(); atualizarGraficos(); carregarSelectClientes(); renderizarListaEstoques(); carregarSelectEstoques('prodEstoqueIdSimples'); carregarSelectEstoques('editProdEstoqueId'); }
         function toggleTheme() { let novo = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.body.setAttribute('data-theme', novo); db.config.tema = novo; salvarDB(); }
