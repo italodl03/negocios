@@ -294,9 +294,8 @@
         .cliente-actions .action-btn.whatsapp:hover { background: #25d366; color: white; }
         
         .debito-bruto { color: var(--erro); font-weight: bold; }
-        .debito-liquido { color: var(--sucesso); font-weight: bold; }
         .debito-juros { color: #f4a261; font-weight: bold; }
-        .debito-custo { color: var(--texto-secundario); }
+        .debito-liquido { color: var(--sucesso); font-weight: bold; }
         .cliente-detalhes { display: flex; flex-direction: column; gap: 2px; }
         .cliente-detalhes small { font-size: 0.75rem; }
     </style>
@@ -345,7 +344,6 @@
                 <div class="metric-card positive"><div class="metric-title">Lucro Líquido</div><div class="metric-value" id="dashLucro" style="color:var(--sucesso);">R$ 0,00</div></div>
                 <div class="metric-card negative"><div class="metric-title">Gastos Totais</div><div class="metric-value" id="dashGastos" style="color:var(--erro);">R$ 0,00</div></div>
                 <div class="metric-card neutral"><div class="metric-title">Carteira de Fiado (Bruto)</div><div class="metric-value" id="dashFiado">R$ 0,00</div></div>
-                <div class="metric-card neutral"><div class="metric-title">Carteira de Fiado (Líquido)</div><div class="metric-value" id="dashFiadoLiquido" style="color:var(--sucesso);">R$ 0,00</div></div>
                 <div class="metric-card"><div class="metric-title">Vendas Realizadas</div><div class="metric-value" id="dashQtdVendas">0</div></div>
                 <div class="metric-card"><div class="metric-title">Itens em Estoque</div><div class="metric-value" id="dashEstoque">0</div></div>
                 <div class="metric-card positive"><div class="metric-title">Total em Pix</div><div class="metric-value" id="dashPix">R$ 0,00</div></div>
@@ -451,7 +449,7 @@
         let primeiroEstoqueId = db.estoques[0]?.id;
         db.produtos.forEach(p => { if (!p.estoqueId && primeiroEstoqueId) p.estoqueId = primeiroEstoqueId; });
 
-        // MIGRAÇÃO PARA CLIENTES COM custoTotalFiado
+        // MIGRAÇÃO PARA CLIENTES COM custoTotalFiado (mantido para cálculo de lucro, mas não exibido)
         db.clientes.forEach(c => { if (c.custoTotalFiado === undefined) c.custoTotalFiado = 0; });
 
         let charts = {}, carrinhoAtual = {}, tipoPagamentoSelecionado = 'avista', produtoEditandoId = null;
@@ -740,15 +738,16 @@
             }
         }
 
+        // ====================== RENDERIZAÇÃO DE CLIENTES (com Débito Líquido) ======================
         function renderizarClientes() { 
             let busca = document.getElementById('buscaCliente')?.value.toLowerCase() || ''; 
             let filtrados = db.clientes.filter(c => c.nome.toLowerCase().includes(busca)); 
             document.getElementById('listaClientes').innerHTML = filtrados.map(c => {
                 let debitoBruto = c.debito || 0;
                 let custoFiado = c.custoTotalFiado || 0;
-                let debitoLiquido = debitoBruto - custoFiado; // Líquido = bruto - custo
+                let debitoLiquido = debitoBruto - custoFiado; // DÉBITO LÍQUIDO
                 let jurosAcumulados = calcularJurosAcumulados(c);
-                let debitoTotal = debitoBruto + jurosAcumulados; // Total a pagar (com juros)
+                let debitoTotal = debitoBruto + jurosAcumulados;
                 let temJuros = jurosAcumulados > 0.01;
                 return `
                 <div class="item-row">
@@ -757,10 +756,9 @@
                         <small>${c.telefone || ''}</small>
                         <div class="cliente-detalhes">
                             <small class="debito-bruto">💰 Débito Bruto: R$ ${debitoBruto.toFixed(2)}</small>
-                            <small class="debito-custo">📦 Custo dos Produtos: R$ ${custoFiado.toFixed(2)}</small>
-                            <small class="debito-liquido">💵 Débito Líquido (Bruto - Custo): R$ ${debitoLiquido.toFixed(2)}</small>
+                            <small class="debito-liquido">📊 Débito Líquido: R$ ${debitoLiquido.toFixed(2)}</small>
                             ${temJuros ? `<small class="debito-juros">📈 Juros Acumulados: R$ ${jurosAcumulados.toFixed(2)}</small>` : ''}
-                            ${(debitoBruto + jurosAcumulados) > 0 ? `<small class="debito-bruto">🔴 Total a Pagar: R$ ${(debitoBruto + jurosAcumulados).toFixed(2)}</small>` : ''}
+                            ${debitoTotal > 0 ? `<small class="debito-bruto">🔴 Total a Pagar: R$ ${debitoTotal.toFixed(2)}</small>` : ''}
                         </div>
                     </div>
                     <div class="item-meta">
@@ -781,11 +779,12 @@
         function deletarCliente(id) { if (confirm('Excluir cliente?')) { db.clientes = db.clientes.filter(c => c.id !== id); salvarDB(); } }
         function adicionarDebito(id) { let valor = parseFloat(prompt('Valor do débito (R$):')); if (valor && !isNaN(valor)) { let cliente = db.clientes.find(c => c.id === id); if (cliente) { cliente.debito = (cliente.debito || 0) + valor; if (!cliente.dataUltimaCompra) cliente.dataUltimaCompra = new Date().toISOString(); salvarDB(); } } }
         
-        // ====== FUNÇÃO DE PAGAMENTO CORRIGIDA ======
+        // ====== FUNÇÃO DE PAGAMENTO CORRIGIDA (com custo proporcional) ======
         function pagarDebitoComEscolha(id) { 
             let cliente = db.clientes.find(c => c.id === id); 
             if (!cliente) return;
             let debitoBruto = cliente.debito || 0;
+            let custoFiado = cliente.custoTotalFiado || 0;
             let jurosAcumulados = calcularJurosAcumulados(cliente);
             let debitoTotal = debitoBruto + jurosAcumulados;
             
@@ -794,7 +793,13 @@
                 return; 
             } 
             
-            let valorPagar = parseFloat(prompt(`Débito Bruto: R$ ${debitoBruto.toFixed(2)}\nJuros Acumulados: R$ ${jurosAcumulados.toFixed(2)}\nTotal a Pagar: R$ ${debitoTotal.toFixed(2)}\n\nDigite o valor a pagar (total):`)); 
+            let valorPagar = parseFloat(prompt(
+                `Débito Bruto: R$ ${debitoBruto.toFixed(2)}\n` +
+                `Débito Líquido: R$ ${(debitoBruto - custoFiado).toFixed(2)}\n` +
+                `Juros Acumulados: R$ ${jurosAcumulados.toFixed(2)}\n` +
+                `Total a Pagar: R$ ${debitoTotal.toFixed(2)}\n\n` +
+                `Digite o valor a pagar:`
+            )); 
             
             if (isNaN(valorPagar) || valorPagar <= 0) return; 
             if (valorPagar > debitoTotal) { 
@@ -802,47 +807,54 @@
                 return; 
             } 
             
-            // Calcula quanto do pagamento vai para o débito bruto e quanto para os juros
-            let proporcao = valorPagar / debitoTotal;
-            let valorAbaterBruto = debitoBruto * proporcao;
-            let valorAbaterJuros = jurosAcumulados * proporcao;
+            // Separa o pagamento em juros e abatimento do débito bruto
+            let valorJurosPago = Math.min(valorPagar, jurosAcumulados);
+            let valorDebitoPago = valorPagar - valorJurosPago;
             
-            mostrarEscolhaPagamento(valorPagar, 
-                // Pagamento em DINHEIRO
-                () => { 
-                    // Registra o pagamento como venda
-                    let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado) - Total', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
-                    registrarVenda(cliente.id, cliente.nome, itens, valorPagar, 0, 'dinheiro');
-                    
-                    // Abate do débito bruto e zera juros
-                    cliente.debito = Math.max(0, debitoBruto - valorAbaterBruto);
-                    // O custoTotalFiado permanece o mesmo (não é abatido no pagamento, pois já foi contabilizado)
-                    if (cliente.debito === 0) {
-                        cliente.dataUltimaCompra = null;
-                    } else {
-                        cliente.dataUltimaCompra = new Date().toISOString();
-                    }
-                    salvarDB(); 
-                    alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} em DINHEIRO registrado.\nDébito bruto restante: R$ ${cliente.debito.toFixed(2)}`); 
-                }, 
-                // Pagamento em PIX
-                () => { 
-                    exibirModalPix(valorPagar, () => { 
-                        let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado) - Total', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
-                        registrarVenda(cliente.id, cliente.nome, itens, valorPagar, 0, 'pix');
-                        
-                        // Abate do débito bruto e zera juros
-                        cliente.debito = Math.max(0, debitoBruto - valorAbaterBruto);
-                        if (cliente.debito === 0) {
-                            cliente.dataUltimaCompra = null;
-                        } else {
-                            cliente.dataUltimaCompra = new Date().toISOString();
-                        }
-                        salvarDB(); 
-                        alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} via PIX confirmado.\nDébito bruto restante: R$ ${cliente.debito.toFixed(2)}`); 
-                    }); 
-                } 
-            ); 
+            // Proporção do débito bruto que está sendo pago
+            let proporcaoDebito = (debitoBruto > 0) ? (valorDebitoPago / debitoBruto) : 0;
+            let custoAbatido = custoFiado * proporcaoDebito;
+            
+            // Atualiza o cliente
+            cliente.debito = Math.max(0, debitoBruto - valorDebitoPago);
+            cliente.custoTotalFiado = Math.max(0, custoFiado - custoAbatido);
+            if (cliente.debito === 0) {
+                cliente.dataUltimaCompra = null;
+            } else {
+                cliente.dataUltimaCompra = new Date().toISOString();
+            }
+            salvarDB();
+            
+            // Registra a venda (pagamento) com o custo correto
+            let itens = [{ 
+                produtoId: null, 
+                nome: 'Pagamento de débito (fiado)', 
+                qtd: 1, 
+                valor: valorPagar, 
+                custoUnitario: custoAbatido // custo total do que foi pago
+            }];
+            
+            // Função auxiliar para registrar e exibir mensagem
+            function registrarPagamento(metodo) {
+                db.vendas.push({
+                    id: Date.now(),
+                    clienteId: cliente.id,
+                    clienteNome: cliente.nome,
+                    itens: itens,
+                    valorTotal: valorPagar,
+                    custoTotal: custoAbatido,
+                    data: new Date().toISOString(),
+                    tipo: metodo
+                });
+                salvarDB();
+                alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} em ${metodo.toUpperCase()} registrado.\nDébito bruto restante: R$ ${cliente.debito.toFixed(2)}`);
+            }
+            
+            // Escolha do método de pagamento
+            mostrarEscolhaPagamento(valorPagar,
+                () => { registrarPagamento('dinheiro'); },
+                () => { exibirModalPix(valorPagar, () => { registrarPagamento('pix'); }); }
+            );
         }
 
         function atualizarDashboard() { 
@@ -857,14 +869,8 @@
             // Lucro líquido = faturamento - gastos - custo
             let lucro = fat - gastos - custo;
             
-            // Carteira de fiado - bruto e líquido
+            // Carteira de fiado - bruto
             let fiadoBruto = db.clientes.reduce((s,c)=>s+(c.debito||0),0);
-            let fiadoLiquido = 0;
-            db.clientes.forEach(c => {
-                let debitoBruto = c.debito || 0;
-                let custoFiado = c.custoTotalFiado || 0;
-                fiadoLiquido += (debitoBruto - custoFiado);
-            });
             
             let totalEstoque = db.estoques.reduce((s,e)=>s+e.quantidade,0);
             let meta = db.metaFaturamento; 
@@ -874,7 +880,6 @@
             document.getElementById('dashLucro').innerHTML = `R$ ${lucro.toFixed(2)}`; 
             document.getElementById('dashGastos').innerHTML = `R$ ${gastos.toFixed(2)}`; 
             document.getElementById('dashFiado').innerHTML = `R$ ${fiadoBruto.toFixed(2)}`; 
-            document.getElementById('dashFiadoLiquido').innerHTML = `R$ ${fiadoLiquido.toFixed(2)}`;
             document.getElementById('dashQtdVendas').innerHTML = db.vendas.length; 
             document.getElementById('dashEstoque').innerHTML = totalEstoque; 
             document.getElementById('dashPix').innerHTML = `R$ ${totalPix.toFixed(2)}`;
@@ -907,20 +912,12 @@
                 ctx.fillText('Nenhuma despesa registrada', ctx.canvas.width/2, ctx.canvas.height/2);
             }
 
-            // Gráfico Top Devedores - mostra débito líquido (bruto - custo)
-            let devedores = db.clientes.filter(c => {
-                let debitoBruto = c.debito || 0;
-                let custoFiado = c.custoTotalFiado || 0;
-                return (debitoBruto - custoFiado) > 0.01;
-            }).slice(0,5);
+            // Gráfico Top Devedores - mostra débito bruto (valor a receber)
+            let devedores = db.clientes.filter(c => (c.debito||0) > 0.01).slice(0,5);
             
             if (charts.devedores) charts.devedores.destroy(); 
             if (devedores.length > 0) {
-                charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c => c.nome),datasets:[{data:devedores.map(c => {
-                    let debitoBruto = c.debito || 0;
-                    let custoFiado = c.custoTotalFiado || 0;
-                    return debitoBruto - custoFiado;
-                }),backgroundColor:['#e71d36','#f4a261','#c5a880','#2ec4b6','#6c757d']}]}});
+                charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c => c.nome),datasets:[{data:devedores.map(c => c.debito),backgroundColor:['#e71d36','#f4a261','#c5a880','#2ec4b6','#6c757d']}]}});
             } else {
                 let ctx = document.getElementById('chartMaioresDevedores').getContext('2d');
                 ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
@@ -946,8 +943,6 @@
         function switchView(view, btn) { document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active')); document.getElementById(`view-${view}`).classList.add('active'); document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); if (btn) btn.classList.add('active'); if (view === 'gastos') renderizarGastos(); if (view === 'produtos') { renderizarListaProdutos(); renderizarListaEstoques(); carregarSelectEstoques('prodEstoqueIdSimples'); } if (view === 'vendas') { renderizarProdutosVenda(); carregarSelectClientes(); atualizarResumoVenda(); } if (view === 'fiado') renderizarClientes(); }
         function carregarSelectClientes() { let sel = document.getElementById('clienteVendaSelect'); if(sel) sel.innerHTML = '<option value="avulso">Cliente Avulso (Sem cadastro)</option>' + db.clientes.map(c => {
             let debitoBruto = c.debito || 0;
-            let custoFiado = c.custoTotalFiado || 0;
-            let debitoLiquido = debitoBruto - custoFiado;
             let juros = calcularJurosAcumulados(c);
             let total = debitoBruto + juros;
             return `<option value="${c.id}">${c.nome} ${total > 0 ? `(R$ ${total.toFixed(2)})` : ''}</option>`;
@@ -960,16 +955,12 @@
                 let cliente = db.clientes.find(c => c.id == clienteId); 
                 if (cliente) {
                     let debitoBruto = cliente.debito || 0;
-                    let custoFiado = cliente.custoTotalFiado || 0;
-                    let debitoLiquido = debitoBruto - custoFiado;
                     let juros = calcularJurosAcumulados(cliente);
                     let total = debitoBruto + juros;
                     if (total > 0.01) { 
                         infoDiv.style.display = 'block'; 
                         infoDiv.innerHTML = `
                             <span class="debito">💰 Débito Bruto: R$ ${debitoBruto.toFixed(2)}</span><br>
-                            <span class="custo">📦 Custo dos Produtos: R$ ${custoFiado.toFixed(2)}</span><br>
-                            <span class="liquido">💵 Débito Líquido: R$ ${debitoLiquido.toFixed(2)}</span><br>
                             ${juros > 0.01 ? `<span class="juros-info">📈 Juros: R$ ${juros.toFixed(2)}</span><br>` : ''}
                             <span class="debito">🔴 Total a Pagar: R$ ${total.toFixed(2)}</span>
                         `; 
