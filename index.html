@@ -117,6 +117,8 @@
         .resumo-venda .total { font-size: 1.2rem; font-weight: bold; color: var(--dourado); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--borda); }
         .cliente-info { background: var(--bg-principal); padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 0.85rem; }
         .cliente-info .debito { color: var(--erro); font-weight: bold; }
+        .cliente-info .liquido { color: var(--sucesso); font-weight: bold; }
+        .cliente-info .custo { color: var(--texto-secundario); }
         nav.nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 1px solid var(--borda); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.03); }
         .nav-item { background: none; border: none; color: var(--texto-secundario); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; font-weight: 600; cursor: pointer; gap: 4px; width: 20%; transition: var(--transicao); }
         .nav-item.active { color: var(--dourado); }
@@ -132,6 +134,8 @@
         .action-btn.danger:hover { background: var(--erro); color: white; }
         .action-btn.success { border-color: var(--sucesso); color: var(--sucesso); }
         .action-btn.success:hover { background: var(--sucesso); color: white; }
+        .action-btn.whatsapp { border-color: #25d366; color: #25d366; }
+        .action-btn.whatsapp:hover { background: #25d366; color: white; }
         .box-qrcode { display: flex; justify-content: center; align-items: center; margin: 15px 0; background: #ffffff; padding: 15px; border-radius: 12px; }
         [data-theme="dark"] .box-qrcode { background: #2a2a2a; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -144,7 +148,7 @@
         .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; margin-left: 8px; color: var(--texto-secundario); }
         .btn-icon:hover { color: var(--dourado); }
         
-        /* ESTILO DO BOLETO DIGITAL - VERSÃO LIMPA SEM CHAVE PIX TEXTUAL */
+        /* ESTILO DO BOLETO DIGITAL */
         .boleto-digital {
             background: white;
             color: #1a1a1a;
@@ -286,6 +290,15 @@
         .cliente-actions .action-btn.editar:hover { background: var(--dourado); color: white; }
         .cliente-actions .action-btn.boleto { border-color: #2ec4b6; color: #2ec4b6; }
         .cliente-actions .action-btn.boleto:hover { background: #2ec4b6; color: white; }
+        .cliente-actions .action-btn.whatsapp { border-color: #25d366; color: #25d366; }
+        .cliente-actions .action-btn.whatsapp:hover { background: #25d366; color: white; }
+        
+        .debito-bruto { color: var(--erro); font-weight: bold; }
+        .debito-liquido { color: var(--sucesso); font-weight: bold; }
+        .debito-juros { color: #f4a261; font-weight: bold; }
+        .debito-custo { color: var(--texto-secundario); }
+        .cliente-detalhes { display: flex; flex-direction: column; gap: 2px; }
+        .cliente-detalhes small { font-size: 0.75rem; }
     </style>
 </head>
 <body>
@@ -331,7 +344,8 @@
                 <div class="metric-card positive"><div class="metric-title">Faturamento Bruto</div><div class="metric-value" id="dashFaturamento">R$ 0,00</div></div>
                 <div class="metric-card positive"><div class="metric-title">Lucro Líquido</div><div class="metric-value" id="dashLucro" style="color:var(--sucesso);">R$ 0,00</div></div>
                 <div class="metric-card negative"><div class="metric-title">Gastos Totais</div><div class="metric-value" id="dashGastos" style="color:var(--erro);">R$ 0,00</div></div>
-                <div class="metric-card neutral"><div class="metric-title">Carteira de Fiado</div><div class="metric-value" id="dashFiado">R$ 0,00</div></div>
+                <div class="metric-card neutral"><div class="metric-title">Carteira de Fiado (Bruto)</div><div class="metric-value" id="dashFiado">R$ 0,00</div></div>
+                <div class="metric-card neutral"><div class="metric-title">Carteira de Fiado (Líquido)</div><div class="metric-value" id="dashFiadoLiquido" style="color:var(--sucesso);">R$ 0,00</div></div>
                 <div class="metric-card"><div class="metric-title">Vendas Realizadas</div><div class="metric-value" id="dashQtdVendas">0</div></div>
                 <div class="metric-card"><div class="metric-title">Itens em Estoque</div><div class="metric-value" id="dashEstoque">0</div></div>
                 <div class="metric-card positive"><div class="metric-title">Total em Pix</div><div class="metric-value" id="dashPix">R$ 0,00</div></div>
@@ -390,7 +404,7 @@
                     <div class="resumo-venda">
                         <p>📦 Itens: <strong id="totalItens">0</strong></p>
                         <p>💰 Subtotal: <strong id="subtotalVenda">R$ 0,00</strong></p>
-                        <div id="debitoInfo" style="display:none;"><p>📝 Débito atual: <strong id="debitoAtual" style="color:var(--erro);">R$ 0,00</strong></p><p>➕ Novo débito: <strong id="novoDebito" style="color:var(--dourado);">R$ 0,00</strong></p></div>
+                        <div id="debitoInfo" style="display:none;"><p>📝 Débito Bruto: <strong id="debitoAtual" style="color:var(--erro);">R$ 0,00</strong></p><p>➕ Novo débito bruto: <strong id="novoDebito" style="color:var(--erro);">R$ 0,00</strong></p></div>
                         <div class="total">💵 TOTAL: <span id="totalVendaValor">R$ 0,00</span></div>
                     </div>
                     <div class="payment-options"><div class="payment-option selected" onclick="selecionarPagamento('avista')" id="optAvista">💵 À Vista</div><div class="payment-option" onclick="selecionarPagamento('fiado')" id="optFiado">📝 Fiado</div></div>
@@ -436,6 +450,9 @@
         if (!db.ordemProdutos) db.ordemProdutos = db.produtos.map(p => p.id);
         let primeiroEstoqueId = db.estoques[0]?.id;
         db.produtos.forEach(p => { if (!p.estoqueId && primeiroEstoqueId) p.estoqueId = primeiroEstoqueId; });
+
+        // MIGRAÇÃO PARA CLIENTES COM custoTotalFiado
+        db.clientes.forEach(c => { if (c.custoTotalFiado === undefined) c.custoTotalFiado = 0; });
 
         let charts = {}, carrinhoAtual = {}, tipoPagamentoSelecionado = 'avista', produtoEditandoId = null;
 
@@ -500,14 +517,14 @@
         function alterarQuantidade(pid, delta) { let p = db.produtos.find(prod => prod.id === pid); if (!p) return; let estoque = db.estoques.find(e => e.id === p.estoqueId); if (!estoque) return; let nova = (carrinhoAtual[pid] || 0) + delta; if (nova < 0) nova = 0; if (nova > estoque.quantidade) return; carrinhoAtual[pid] = nova; document.getElementById(`qtd-${pid}`).textContent = nova; if (nova === 0) delete carrinhoAtual[pid]; atualizarResumoVenda(); }
         function calcularSubtotal() { let subtotal = 0, totalItens = 0; for (let [id, qtd] of Object.entries(carrinhoAtual)) if (qtd > 0) { let p = db.produtos.find(prod => prod.id == id); if (p) { subtotal += p.venda * qtd; totalItens += qtd; } } return { subtotal, totalItens }; }
         function atualizarResumoVenda() { let { subtotal, totalItens } = calcularSubtotal(); document.getElementById('totalItens').textContent = totalItens; document.getElementById('subtotalVenda').innerHTML = `R$ ${subtotal.toFixed(2)}`; document.getElementById('totalVendaValor').innerHTML = `R$ ${subtotal.toFixed(2)}`; let clienteId = document.getElementById('clienteVendaSelect').value; let debitoInfo = document.getElementById('debitoInfo'); if (clienteId !== 'avulso' && tipoPagamentoSelecionado === 'fiado') { let cliente = db.clientes.find(c => c.id == clienteId); if (cliente) { debitoInfo.style.display = 'block'; document.getElementById('debitoAtual').innerHTML = `R$ ${cliente.debito.toFixed(2)}`; document.getElementById('novoDebito').innerHTML = `R$ ${(cliente.debito + subtotal).toFixed(2)}`; } } else debitoInfo.style.display = 'none'; }
-        function finalizarVenda() { const clienteId = document.getElementById('clienteVendaSelect').value; let itensVenda = [], valorTotal = 0, custoTotal = 0; for (let [pid, qtd] of Object.entries(carrinhoAtual)) if (qtd > 0) { let prod = db.produtos.find(p => p.id == pid); if (!prod) continue; let estoque = db.estoques.find(e => e.id === prod.estoqueId); if (!estoque || estoque.quantidade < qtd) { alert(`Estoque insuficiente para ${prod.nome}. Disponível: ${estoque ? estoque.quantidade : 0}`); return; } let custoUnitario = estoque.custoUnitario; valorTotal += prod.venda * qtd; custoTotal += custoUnitario * qtd; itensVenda.push({ produtoId: prod.id, nome: prod.nome, qtd, valor: prod.venda * qtd, custoUnitario }); estoque.quantidade -= qtd; estoque.custoTotal = estoque.quantidade * estoque.custoUnitario; } if (itensVenda.length === 0) { alert('Carrinho vazio'); return; } let clienteNome = 'Cliente Avulso'; if (tipoPagamentoSelecionado === 'fiado') { if (clienteId === 'avulso') { alert('Selecione um cliente para fiado'); return; } let cli = db.clientes.find(c => c.id == clienteId); if (cli) { cli.debito = (cli.debito || 0) + valorTotal; cli.dataUltimaCompra = new Date().toISOString(); clienteNome = cli.nome; } registrarVenda(clienteId === 'avulso' ? null : clienteId, clienteNome, itensVenda, valorTotal, custoTotal, 'fiado'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Venda fiado: R$ ${valorTotal.toFixed(2)} para ${clienteNome}`); } else { let nomeCliente = (clienteId !== 'avulso' && db.clientes.find(c=>c.id==clienteId)) ? db.clientes.find(c=>c.id==clienteId).nome : 'Cliente Avulso'; mostrarEscolhaPagamento(valorTotal, () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'dinheiro'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Venda em DINHEIRO: R$ ${valorTotal.toFixed(2)}`); }, () => { exibirModalPix(valorTotal, () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'pix'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Pagamento PIX confirmado! Valor: R$ ${valorTotal.toFixed(2)}`); }); }); } }
+        function finalizarVenda() { const clienteId = document.getElementById('clienteVendaSelect').value; let itensVenda = [], valorTotal = 0, custoTotal = 0; for (let [pid, qtd] of Object.entries(carrinhoAtual)) if (qtd > 0) { let prod = db.produtos.find(p => p.id == pid); if (!prod) continue; let estoque = db.estoques.find(e => e.id === prod.estoqueId); if (!estoque || estoque.quantidade < qtd) { alert(`Estoque insuficiente para ${prod.nome}. Disponível: ${estoque ? estoque.quantidade : 0}`); return; } let custoUnitario = estoque.custoUnitario; valorTotal += prod.venda * qtd; custoTotal += custoUnitario * qtd; itensVenda.push({ produtoId: prod.id, nome: prod.nome, qtd, valor: prod.venda * qtd, custoUnitario }); estoque.quantidade -= qtd; estoque.custoTotal = estoque.quantidade * estoque.custoUnitario; } if (itensVenda.length === 0) { alert('Carrinho vazio'); return; } let clienteNome = 'Cliente Avulso'; if (tipoPagamentoSelecionado === 'fiado') { if (clienteId === 'avulso') { alert('Selecione um cliente para fiado'); return; } let cli = db.clientes.find(c => c.id == clienteId); if (cli) { cli.debito = (cli.debito || 0) + valorTotal; cli.custoTotalFiado = (cli.custoTotalFiado || 0) + custoTotal; cli.dataUltimaCompra = new Date().toISOString(); clienteNome = cli.nome; } registrarVenda(clienteId === 'avulso' ? null : clienteId, clienteNome, itensVenda, valorTotal, custoTotal, 'fiado'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Venda fiado: R$ ${valorTotal.toFixed(2)} para ${clienteNome}`); } else { let nomeCliente = (clienteId !== 'avulso' && db.clientes.find(c=>c.id==clienteId)) ? db.clientes.find(c=>c.id==clienteId).nome : 'Cliente Avulso'; mostrarEscolhaPagamento(valorTotal, () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'dinheiro'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Venda em DINHEIRO: R$ ${valorTotal.toFixed(2)}`); }, () => { exibirModalPix(valorTotal, () => { registrarVenda(clienteId === 'avulso' ? null : clienteId, nomeCliente, itensVenda, valorTotal, custoTotal, 'pix'); carrinhoAtual = {}; renderizarProdutosVenda(); atualizarResumoVenda(); atualizarInfoCliente(); alert(`✅ Pagamento PIX confirmado! Valor: R$ ${valorTotal.toFixed(2)}`); }); }); } }
         function registrarVenda(clienteId, clienteNome, itens, valorTotal, custoTotal, metodo) { db.vendas.push({ id: Date.now(), clienteId, clienteNome, itens, valorTotal, custoTotal, data: new Date().toISOString(), tipo: metodo }); salvarDB(); }
 
         // ====================== GASTOS, CLIENTES, PIX, DASHBOARD ======================
         function salvarGasto(e) { e.preventDefault(); db.gastos.push({ id: Date.now(), nome: document.getElementById('gastoNome').value, valor: parseFloat(document.getElementById('gastoValor').value), categoria: document.getElementById('gastoCategoria').value, data: document.getElementById('gastoData').value, obs: document.getElementById('gastoObs').value }); salvarDB(); document.getElementById('formGasto').reset(); }
         function renderizarGastos() { let busca = document.getElementById('buscaGasto')?.value.toLowerCase() || '', cat = document.getElementById('filtroCategoriaGasto')?.value || ''; let filtrados = db.gastos.filter(g => g.nome.toLowerCase().includes(busca)); if (cat) filtrados = filtrados.filter(g => g.categoria === cat); document.getElementById('listaGastos').innerHTML = filtrados.map(g => `<div class="item-row"><div><strong>${g.nome}</strong><br><small>${g.categoria} - ${g.data || 'Sem data'}</small></div><div class="item-meta"><strong>R$ ${g.valor.toFixed(2)}</strong><br><button onclick="deletarGasto(${g.id})" style="background:none; border:none; color:var(--erro); cursor:pointer;">🗑️</button></div></div>`).join(''); }
         function deletarGasto(id) { if(confirm('Deletar gasto?')) { db.gastos = db.gastos.filter(g => g.id !== id); salvarDB(); } }
-        function salvarCliente(e) { e.preventDefault(); db.clientes.push({ id: Date.now(), nome: document.getElementById('cliNome').value, telefone: document.getElementById('cliTelefone').value, debito: 0, dataUltimaCompra: null }); salvarDB(); document.getElementById('formCliente').reset(); alert('Cliente registrado'); }
+        function salvarCliente(e) { e.preventDefault(); db.clientes.push({ id: Date.now(), nome: document.getElementById('cliNome').value, telefone: document.getElementById('cliTelefone').value, debito: 0, custoTotalFiado: 0, dataUltimaCompra: null }); salvarDB(); document.getElementById('formCliente').reset(); alert('Cliente registrado'); }
 
         // EDIÇÃO DE CLIENTE E BOLETO (com data e botões)
         let clienteEditandoId = null;
@@ -636,14 +653,117 @@
             fecharModalGerarBoleto();
         }
 
+        // ====== FUNÇÃO PARA CALCULAR JUROS ACUMULADOS ======
+        function calcularJurosAcumulados(cliente) {
+            if (!cliente.debito || cliente.debito <= 0 || !cliente.dataUltimaCompra) return 0;
+            let diasCarencia = db.config.jurosDiasCarencia || 7;
+            let taxa = (db.config.jurosMensal || 5) / 100;
+            let tipo = db.config.jurosTipo || 'simples';
+            let dataAtual = new Date();
+            let diff = Math.floor((dataAtual - new Date(cliente.dataUltimaCompra)) / (1000 * 3600 * 24));
+            if (diff <= diasCarencia) return 0;
+            let meses = (diff - diasCarencia) / 30;
+            if (tipo === 'simples') {
+                return cliente.debito * taxa * meses;
+            } else {
+                return cliente.debito * (Math.pow(1 + taxa, meses) - 1);
+            }
+        }
+
+        function calcularJurosDevedor(debito, dataInicial) { 
+            if (!debito || debito <= 0) return 0; 
+            let diasCarencia = db.config.jurosDiasCarencia || 7; 
+            let taxa = (db.config.jurosMensal || 5) / 100; 
+            let tipo = db.config.jurosTipo || 'simples'; 
+            let dataAtual = new Date(); 
+            let diff = Math.floor((dataAtual - new Date(dataInicial)) / (1000*3600*24)); 
+            if (diff <= diasCarencia) return 0; 
+            let meses = (diff - diasCarencia) / 30; 
+            return tipo === 'simples' ? debito * taxa * meses : debito * (Math.pow(1+taxa, meses) - 1); 
+        }
+
+        function aplicarJurosCliente(id) { 
+            let cliente = db.clientes.find(c => c.id === id); 
+            if (!cliente) return;
+            if (!cliente.debito || cliente.debito <= 0) {
+                alert('Cliente sem débito para aplicar juros.');
+                return;
+            }
+            if (!cliente.dataUltimaCompra) {
+                alert('Cliente não possui data de última compra para calcular juros.');
+                return;
+            }
+            let juros = calcularJurosDevedor(cliente.debito, cliente.dataUltimaCompra); 
+            if (juros > 0.01) { 
+                if (confirm(`Aplicar R$ ${juros.toFixed(2)} de juros ao débito bruto de R$ ${cliente.debito.toFixed(2)}?`)) { 
+                    cliente.debito += juros; 
+                    cliente.dataUltimaCompra = new Date().toISOString(); 
+                    salvarDB(); 
+                    alert(`✅ Juros de R$ ${juros.toFixed(2)} aplicados. Novo débito bruto: R$ ${cliente.debito.toFixed(2)}`);
+                } 
+            } else {
+                alert('Sem juros acumulados no momento.');
+            }
+        }
+
+        // ====== FUNÇÃO WHATSAPP MODIFICADA ======
+        function enviarWhatsApp(clienteId) {
+            let cliente = db.clientes.find(c => c.id === clienteId);
+            if (!cliente) return;
+            let telefone = cliente.telefone || '';
+            telefone = telefone.replace(/\D/g, '');
+            if (telefone.length < 10) {
+                alert('Número de telefone inválido ou não cadastrado. Edite o cliente e adicione um número válido.');
+                return;
+            }
+            if (!telefone.startsWith('55')) {
+                telefone = '55' + telefone;
+            }
+            
+            let debitoBruto = cliente.debito || 0;
+            let juros = calcularJurosAcumulados(cliente);
+            let total = debitoBruto + juros;
+            let nomeEmpresa = (db.config.nomePreto || 'NEXIS') + ' ' + (db.config.nomeDourado || 'PREMIUM');
+            
+            // Mensagem simplificada
+            let mensagem = `Olá ${cliente.nome}! 👋\n\nSeu débito na ${nomeEmpresa} é de R$ ${total.toFixed(2)}.\n\nEstamos à disposição para negociar. 😊`;
+            
+            let url = `https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(mensagem)}`;
+            window.open(url, '_blank');
+            
+            // Copiar chave Pix com o valor da dívida
+            let pixPayload = gerarPayloadPix(total);
+            if (pixPayload) {
+                navigator.clipboard.writeText(pixPayload).then(() => {
+                    // Não exibe alerta para não poluir
+                }).catch(() => {});
+            }
+        }
+
         function renderizarClientes() { 
             let busca = document.getElementById('buscaCliente')?.value.toLowerCase() || ''; 
             let filtrados = db.clientes.filter(c => c.nome.toLowerCase().includes(busca)); 
-            document.getElementById('listaClientes').innerHTML = filtrados.map(c => `
+            document.getElementById('listaClientes').innerHTML = filtrados.map(c => {
+                let debitoBruto = c.debito || 0;
+                let custoFiado = c.custoTotalFiado || 0;
+                let debitoLiquido = debitoBruto - custoFiado; // Líquido = bruto - custo
+                let jurosAcumulados = calcularJurosAcumulados(c);
+                let debitoTotal = debitoBruto + jurosAcumulados; // Total a pagar (com juros)
+                let temJuros = jurosAcumulados > 0.01;
+                return `
                 <div class="item-row">
-                    <div><strong>${c.nome}</strong><br><small>${c.telefone || ''}</small></div>
+                    <div>
+                        <strong>${c.nome}</strong><br>
+                        <small>${c.telefone || ''}</small>
+                        <div class="cliente-detalhes">
+                            <small class="debito-bruto">💰 Débito Bruto: R$ ${debitoBruto.toFixed(2)}</small>
+                            <small class="debito-custo">📦 Custo dos Produtos: R$ ${custoFiado.toFixed(2)}</small>
+                            <small class="debito-liquido">💵 Débito Líquido (Bruto - Custo): R$ ${debitoLiquido.toFixed(2)}</small>
+                            ${temJuros ? `<small class="debito-juros">📈 Juros Acumulados: R$ ${jurosAcumulados.toFixed(2)}</small>` : ''}
+                            ${(debitoBruto + jurosAcumulados) > 0 ? `<small class="debito-bruto">🔴 Total a Pagar: R$ ${(debitoBruto + jurosAcumulados).toFixed(2)}</small>` : ''}
+                        </div>
+                    </div>
                     <div class="item-meta">
-                        <strong style="color:var(--erro);">Débito: R$ ${(c.debito || 0).toFixed(2)}</strong>
                         <div class="cliente-actions">
                             <button class="action-btn debito" onclick="adicionarDebito(${c.id})">+ Débito</button>
                             <button class="action-btn pagar" onclick="pagarDebitoComEscolha(${c.id})">Pagar</button>
@@ -651,66 +771,110 @@
                             <button class="action-btn excluir" onclick="deletarCliente(${c.id})">🗑️</button>
                             <button class="action-btn editar" onclick="abrirModalEditarCliente(${c.id})">✏️ Editar</button>
                             <button class="action-btn boleto" onclick="abrirModalGerarBoleto(${c.id})">📄 Boleto</button>
+                            <button class="action-btn whatsapp" onclick="enviarWhatsApp(${c.id})">📱 WhatsApp</button>
                         </div>
                     </div>
                 </div>
-            `).join(''); 
+            `}).join(''); 
         }
+
         function deletarCliente(id) { if (confirm('Excluir cliente?')) { db.clientes = db.clientes.filter(c => c.id !== id); salvarDB(); } }
         function adicionarDebito(id) { let valor = parseFloat(prompt('Valor do débito (R$):')); if (valor && !isNaN(valor)) { let cliente = db.clientes.find(c => c.id === id); if (cliente) { cliente.debito = (cliente.debito || 0) + valor; if (!cliente.dataUltimaCompra) cliente.dataUltimaCompra = new Date().toISOString(); salvarDB(); } } }
         
-        // ====== FUNÇÃO ALTERADA: agora registra venda no método escolhido ======
+        // ====== FUNÇÃO DE PAGAMENTO CORRIGIDA ======
         function pagarDebitoComEscolha(id) { 
             let cliente = db.clientes.find(c => c.id === id); 
-            if (!cliente || cliente.debito <= 0) { alert('Cliente sem débito'); return; } 
-            let valorPagar = parseFloat(prompt(`Débito atual: R$ ${cliente.debito.toFixed(2)}\nDigite o valor a pagar:`)); 
+            if (!cliente) return;
+            let debitoBruto = cliente.debito || 0;
+            let jurosAcumulados = calcularJurosAcumulados(cliente);
+            let debitoTotal = debitoBruto + jurosAcumulados;
+            
+            if (debitoTotal <= 0) { 
+                alert('Cliente sem débito total para pagar.'); 
+                return; 
+            } 
+            
+            let valorPagar = parseFloat(prompt(`Débito Bruto: R$ ${debitoBruto.toFixed(2)}\nJuros Acumulados: R$ ${jurosAcumulados.toFixed(2)}\nTotal a Pagar: R$ ${debitoTotal.toFixed(2)}\n\nDigite o valor a pagar (total):`)); 
+            
             if (isNaN(valorPagar) || valorPagar <= 0) return; 
-            if (valorPagar > cliente.debito) { alert('Valor maior que o débito'); return; } 
+            if (valorPagar > debitoTotal) { 
+                alert('Valor maior que o débito total'); 
+                return; 
+            } 
+            
+            // Calcula quanto do pagamento vai para o débito bruto e quanto para os juros
+            let proporcao = valorPagar / debitoTotal;
+            let valorAbaterBruto = debitoBruto * proporcao;
+            let valorAbaterJuros = jurosAcumulados * proporcao;
+            
             mostrarEscolhaPagamento(valorPagar, 
                 // Pagamento em DINHEIRO
                 () => { 
-                    // Cria um item fictício para registrar a venda
-                    let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado)', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
+                    // Registra o pagamento como venda
+                    let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado) - Total', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
                     registrarVenda(cliente.id, cliente.nome, itens, valorPagar, 0, 'dinheiro');
-                    cliente.debito -= valorPagar; 
-                    if (cliente.debito === 0) cliente.dataUltimaCompra = null; 
+                    
+                    // Abate do débito bruto e zera juros
+                    cliente.debito = Math.max(0, debitoBruto - valorAbaterBruto);
+                    // O custoTotalFiado permanece o mesmo (não é abatido no pagamento, pois já foi contabilizado)
+                    if (cliente.debito === 0) {
+                        cliente.dataUltimaCompra = null;
+                    } else {
+                        cliente.dataUltimaCompra = new Date().toISOString();
+                    }
                     salvarDB(); 
-                    alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} em DINHEIRO registrado.`); 
+                    alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} em DINHEIRO registrado.\nDébito bruto restante: R$ ${cliente.debito.toFixed(2)}`); 
                 }, 
                 // Pagamento em PIX
                 () => { 
                     exibirModalPix(valorPagar, () => { 
-                        let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado)', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
+                        let itens = [{ produtoId: null, nome: 'Pagamento de débito (fiado) - Total', qtd: 1, valor: valorPagar, custoUnitario: 0 }];
                         registrarVenda(cliente.id, cliente.nome, itens, valorPagar, 0, 'pix');
-                        cliente.debito -= valorPagar; 
-                        if (cliente.debito === 0) cliente.dataUltimaCompra = null; 
+                        
+                        // Abate do débito bruto e zera juros
+                        cliente.debito = Math.max(0, debitoBruto - valorAbaterBruto);
+                        if (cliente.debito === 0) {
+                            cliente.dataUltimaCompra = null;
+                        } else {
+                            cliente.dataUltimaCompra = new Date().toISOString();
+                        }
                         salvarDB(); 
-                        alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} via PIX confirmado.`); 
+                        alert(`✅ Pagamento de R$ ${valorPagar.toFixed(2)} via PIX confirmado.\nDébito bruto restante: R$ ${cliente.debito.toFixed(2)}`); 
                     }); 
                 } 
             ); 
         }
-        // ====== FIM DA ALTERAÇÃO ======
 
-        function calcularJurosDevedor(debito, dataInicial) { if (!debito || debito <= 0) return 0; let diasCarencia = db.config.jurosDiasCarencia || 7, taxa = (db.config.jurosMensal || 5) / 100, tipo = db.config.jurosTipo || 'simples', dataAtual = new Date(), diff = Math.floor((dataAtual - new Date(dataInicial)) / (1000*3600*24)); if (diff <= diasCarencia) return 0; let meses = (diff - diasCarencia) / 30; return tipo === 'simples' ? debito * taxa * meses : debito * (Math.pow(1+taxa, meses) - 1); }
-        function aplicarJurosCliente(id) { let cliente = db.clientes.find(c => c.id === id); if (cliente && cliente.debito > 0 && cliente.dataUltimaCompra) { let juros = calcularJurosDevedor(cliente.debito, cliente.dataUltimaCompra); if (juros > 0) { if (confirm(`Aplicar R$ ${juros.toFixed(2)} de juros?`)) { cliente.debito += juros; cliente.dataUltimaCompra = new Date().toISOString(); salvarDB(); } } else alert('Sem juros acumulados'); } }
         function atualizarDashboard() { 
-            // Vendas à vista (dinheiro e pix) – agora inclui pagamentos de débito registrados como venda
+            // Vendas à vista (dinheiro e pix) - inclui pagamentos de débito registrados como venda
             let vendasAVista = db.vendas.filter(v => v.tipo === 'dinheiro' || v.tipo === 'pix');
             let fat = vendasAVista.reduce((s,v)=>s+v.valorTotal,0);
             let custo = vendasAVista.reduce((s,v)=>s+(v.custoTotal||0),0);
             let totalPix = db.vendas.filter(v=>v.tipo==='pix').reduce((s,v)=>s+v.valorTotal,0);
             let totalDinheiro = db.vendas.filter(v=>v.tipo==='dinheiro').reduce((s,v)=>s+v.valorTotal,0);
             let gastos = db.gastos.reduce((s,g)=>s+g.valor,0);
+            
+            // Lucro líquido = faturamento - gastos - custo
             let lucro = fat - gastos - custo;
-            let fiado = db.clientes.reduce((s,c)=>s+(c.debito||0),0);
+            
+            // Carteira de fiado - bruto e líquido
+            let fiadoBruto = db.clientes.reduce((s,c)=>s+(c.debito||0),0);
+            let fiadoLiquido = 0;
+            db.clientes.forEach(c => {
+                let debitoBruto = c.debito || 0;
+                let custoFiado = c.custoTotalFiado || 0;
+                fiadoLiquido += (debitoBruto - custoFiado);
+            });
+            
             let totalEstoque = db.estoques.reduce((s,e)=>s+e.quantidade,0);
             let meta = db.metaFaturamento; 
             let perc = Math.min((fat/meta)*100,100); 
+            
             document.getElementById('dashFaturamento').innerHTML = `R$ ${fat.toFixed(2)}`; 
             document.getElementById('dashLucro').innerHTML = `R$ ${lucro.toFixed(2)}`; 
             document.getElementById('dashGastos').innerHTML = `R$ ${gastos.toFixed(2)}`; 
-            document.getElementById('dashFiado').innerHTML = `R$ ${fiado.toFixed(2)}`; 
+            document.getElementById('dashFiado').innerHTML = `R$ ${fiadoBruto.toFixed(2)}`; 
+            document.getElementById('dashFiadoLiquido').innerHTML = `R$ ${fiadoLiquido.toFixed(2)}`;
             document.getElementById('dashQtdVendas').innerHTML = db.vendas.length; 
             document.getElementById('dashEstoque').innerHTML = totalEstoque; 
             document.getElementById('dashPix').innerHTML = `R$ ${totalPix.toFixed(2)}`;
@@ -718,6 +882,7 @@
             document.getElementById('goalText').innerHTML = `R$ ${fat.toFixed(2)} / R$ ${meta.toFixed(2)}`; 
             document.getElementById('goalProgress').style.width = `${perc}%`; 
         }
+
         function atualizarGraficos() { 
             // Gráfico Lucro vs Despesas
             if (charts.lucroGasto) charts.lucroGasto.destroy(); 
@@ -727,7 +892,7 @@
             let lucro = fat - gastos - custo; 
             charts.lucroGasto = new Chart(document.getElementById('chartLucroGasto'),{type:'bar',data:{labels:['Lucro Líquido','Despesas Totais'],datasets:[{data:[lucro,gastos],backgroundColor:['#2ec4b6','#e71d36']}]}}); 
             
-            // Gráfico Despesas por Categoria - só cria se houver dados
+            // Gráfico Despesas por Categoria
             let cats = {}; 
             db.gastos.forEach(g=>cats[g.categoria]=(cats[g.categoria]||0)+g.valor); 
             if (charts.categorias) charts.categorias.destroy();
@@ -742,11 +907,20 @@
                 ctx.fillText('Nenhuma despesa registrada', ctx.canvas.width/2, ctx.canvas.height/2);
             }
 
-            // Gráfico Top Devedores
-            let devedores = db.clientes.filter(c=>(c.debito||0)>0).slice(0,5); 
+            // Gráfico Top Devedores - mostra débito líquido (bruto - custo)
+            let devedores = db.clientes.filter(c => {
+                let debitoBruto = c.debito || 0;
+                let custoFiado = c.custoTotalFiado || 0;
+                return (debitoBruto - custoFiado) > 0.01;
+            }).slice(0,5);
+            
             if (charts.devedores) charts.devedores.destroy(); 
             if (devedores.length > 0) {
-                charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c=>c.nome),datasets:[{data:devedores.map(c=>c.debito),backgroundColor:'#e71d36'}]}});
+                charts.devedores = new Chart(document.getElementById('chartMaioresDevedores'),{type:'bar',data:{labels:devedores.map(c => c.nome),datasets:[{data:devedores.map(c => {
+                    let debitoBruto = c.debito || 0;
+                    let custoFiado = c.custoTotalFiado || 0;
+                    return debitoBruto - custoFiado;
+                }),backgroundColor:['#e71d36','#f4a261','#c5a880','#2ec4b6','#6c757d']}]}});
             } else {
                 let ctx = document.getElementById('chartMaioresDevedores').getContext('2d');
                 ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
@@ -756,7 +930,9 @@
                 ctx.fillText('Nenhum devedor', ctx.canvas.width/2, ctx.canvas.height/2);
             }
         }
+
         function salvarDB() { localStorage.setItem('nexis_db', JSON.stringify(db)); atualizarDashboard(); renderizarGastos(); renderizarListaProdutos(); renderizarProdutosVenda(); renderizarClientes(); atualizarGraficos(); carregarSelectClientes(); renderizarListaEstoques(); carregarSelectEstoques('prodEstoqueIdSimples'); carregarSelectEstoques('editProdEstoqueId'); }
+        
         function toggleTheme() { let novo = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.body.setAttribute('data-theme', novo); db.config.tema = novo; salvarDB(); }
         function abrirConfiguracoes() { let m = document.getElementById('modalConfig'); m.style.display = 'flex'; document.getElementById('configNomePreto').value = db.config.nomePreto; document.getElementById('configNomeDourado').value = db.config.nomeDourado; document.getElementById('configMeta').value = db.metaFaturamento; document.getElementById('configJurosMensal').value = db.config.jurosMensal; document.getElementById('configJurosDiasCarencia').value = db.config.jurosDiasCarencia; document.getElementById('configJurosTipo').value = db.config.jurosTipo; document.getElementById('configPixChave').value = db.config.pixChave || ''; document.getElementById('configPixNome').value = db.config.pixNome || ''; document.getElementById('configPixCidade').value = db.config.pixCidade || ''; }
         function fecharConfiguracoes() { document.getElementById('modalConfig').style.display = 'none'; }
@@ -768,8 +944,41 @@
         function limparVendas() { if(confirm("Apagar TODAS as vendas?")) { db.vendas = []; salvarDB(); } }
         function zerarMes() { if(confirm("Zerar mês?")) { db.gastos = []; db.vendas = []; salvarDB(); } }
         function switchView(view, btn) { document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active')); document.getElementById(`view-${view}`).classList.add('active'); document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); if (btn) btn.classList.add('active'); if (view === 'gastos') renderizarGastos(); if (view === 'produtos') { renderizarListaProdutos(); renderizarListaEstoques(); carregarSelectEstoques('prodEstoqueIdSimples'); } if (view === 'vendas') { renderizarProdutosVenda(); carregarSelectClientes(); atualizarResumoVenda(); } if (view === 'fiado') renderizarClientes(); }
-        function carregarSelectClientes() { let sel = document.getElementById('clienteVendaSelect'); if(sel) sel.innerHTML = '<option value="avulso">Cliente Avulso (Sem cadastro)</option>' + db.clientes.map(c => `<option value="${c.id}">${c.nome} ${c.debito > 0 ? `(R$ ${c.debito.toFixed(2)})` : ''}</option>`).join(''); }
-        function atualizarInfoCliente() { let clienteId = document.getElementById('clienteVendaSelect').value; let infoDiv = document.getElementById('infoCliente'); if (clienteId !== 'avulso') { let cliente = db.clientes.find(c => c.id == clienteId); if (cliente && cliente.debito > 0) { infoDiv.style.display = 'block'; infoDiv.innerHTML = `<span class="debito">💳 Débito atual: R$ ${cliente.debito.toFixed(2)}</span>`; } else infoDiv.style.display = 'none'; } else infoDiv.style.display = 'none'; atualizarResumoVenda(); }
+        function carregarSelectClientes() { let sel = document.getElementById('clienteVendaSelect'); if(sel) sel.innerHTML = '<option value="avulso">Cliente Avulso (Sem cadastro)</option>' + db.clientes.map(c => {
+            let debitoBruto = c.debito || 0;
+            let custoFiado = c.custoTotalFiado || 0;
+            let debitoLiquido = debitoBruto - custoFiado;
+            let juros = calcularJurosAcumulados(c);
+            let total = debitoBruto + juros;
+            return `<option value="${c.id}">${c.nome} ${total > 0 ? `(R$ ${total.toFixed(2)})` : ''}</option>`;
+        }).join(''); }
+        
+        function atualizarInfoCliente() { 
+            let clienteId = document.getElementById('clienteVendaSelect').value; 
+            let infoDiv = document.getElementById('infoCliente'); 
+            if (clienteId !== 'avulso') { 
+                let cliente = db.clientes.find(c => c.id == clienteId); 
+                if (cliente) {
+                    let debitoBruto = cliente.debito || 0;
+                    let custoFiado = cliente.custoTotalFiado || 0;
+                    let debitoLiquido = debitoBruto - custoFiado;
+                    let juros = calcularJurosAcumulados(cliente);
+                    let total = debitoBruto + juros;
+                    if (total > 0.01) { 
+                        infoDiv.style.display = 'block'; 
+                        infoDiv.innerHTML = `
+                            <span class="debito">💰 Débito Bruto: R$ ${debitoBruto.toFixed(2)}</span><br>
+                            <span class="custo">📦 Custo dos Produtos: R$ ${custoFiado.toFixed(2)}</span><br>
+                            <span class="liquido">💵 Débito Líquido: R$ ${debitoLiquido.toFixed(2)}</span><br>
+                            ${juros > 0.01 ? `<span class="juros-info">📈 Juros: R$ ${juros.toFixed(2)}</span><br>` : ''}
+                            <span class="debito">🔴 Total a Pagar: R$ ${total.toFixed(2)}</span>
+                        `; 
+                    } else infoDiv.style.display = 'none'; 
+                } else infoDiv.style.display = 'none';
+            } else infoDiv.style.display = 'none'; 
+            atualizarResumoVenda(); 
+        }
+        
         function selecionarPagamento(tipo) { tipoPagamentoSelecionado = tipo; document.getElementById('optAvista').classList.toggle('selected', tipo === 'avista'); document.getElementById('optFiado').classList.toggle('selected', tipo === 'fiado'); atualizarResumoVenda(); }
         function mostrarEscolhaPagamento(valorTotal, callbackDinheiro, callbackPix) { document.getElementById('escolhaValorTotal').innerHTML = `R$ ${valorTotal.toFixed(2)}`; const modal = document.getElementById('modalEscolhaPagamento'); const btnDinheiro = document.getElementById('escolhaDinheiroBtn'); const btnPix = document.getElementById('escolhaPixBtn'); const newDinheiro = btnDinheiro.cloneNode(true); const newPix = btnPix.cloneNode(true); btnDinheiro.parentNode.replaceChild(newDinheiro, btnDinheiro); btnPix.parentNode.replaceChild(newPix, btnPix); newDinheiro.addEventListener('click', () => { modal.style.display = 'none'; callbackDinheiro(); }); newPix.addEventListener('click', () => { modal.style.display = 'none'; callbackPix(); }); modal.style.display = 'flex'; }
         function exibirModalPix(valorTotal, callbackAposConfirmar) { let pixString = gerarPayloadPix(valorTotal); if (!pixString) return false; document.getElementById('pixQRCodeContainer').innerHTML = ''; new QRCode(document.getElementById("pixQRCodeContainer"), { text: pixString, width: 220, height: 220, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M }); document.getElementById('pixCopiaCola').value = pixString; document.getElementById('modalPix').style.display = 'flex'; const confirmBtn = document.getElementById('confirmarPixBtn'); const novoBtn = confirmBtn.cloneNode(true); confirmBtn.parentNode.replaceChild(novoBtn, confirmBtn); novoBtn.addEventListener('click', () => { callbackAposConfirmar(); fecharModalPix(); }, { once: true }); return true; }
